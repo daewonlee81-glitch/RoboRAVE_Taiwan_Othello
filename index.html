@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registration · Robot Battle Othello · RoboRAVE Taiwan Open 2026</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"></header>
+<main>
+  <div class="narrow">
+    <div id="demoBanner" class="banner" hidden data-t="Demo mode — data is saved only in this browser."></div>
+    <div class="card" id="formCard">
+      <div class="hero"><h1 data-t="Registration"></h1><span class="chip" data-t="Robot Battle Othello"></span><span class="count" id="count"></span></div>
+      <p class="muted" id="intro"></p>
+      <form id="f" novalidate>
+        <label class="f" for="name" data-t="Full name (English)"></label>
+        <input type="text" id="name" autocomplete="name" maxlength="60" autocapitalize="characters" spellcheck="false">
+        <div class="hint" data-t="As on your passport, e.g. WANG XIAOMING"></div>
+
+        <label class="f" for="dob" data-t="Date of birth"></label>
+        <input type="date" id="dob" min="2005-01-01" max="2022-12-31">
+
+        <label class="f" for="nat" data-t="Nationality"></label>
+        <select id="nat"></select>
+        <input type="text" id="natOther" maxlength="60" hidden style="margin-top:8px">
+
+        <span class="f" style="display:block;margin:16px 0 6px;font-weight:600" data-t="Division"></span>
+        <div class="seg">
+          <label><input type="radio" name="div" value="junior"> <span data-t="Junior — elementary school"></span></label>
+          <label><input type="radio" name="div" value="senior"> <span data-t="Senior — middle / high school"></span></label>
+        </div>
+
+        <label class="agree"><input type="checkbox" id="agree"> <span data-t="I agree that my name, date of birth and nationality are collected to run this competition. Only name and nationality appear on the public bracket."></span></label>
+        <div class="err" id="err" role="alert"></div>
+        <button class="btn pri big" type="submit" id="go" data-t="Register"></button>
+      </form>
+      <div class="links" id="links"></div>
+    </div>
+
+    <div class="card ok-box" id="doneCard" hidden>
+      <h1 data-t="Registration complete"></h1>
+      <p class="muted" data-t="Your registration number"></p>
+      <div class="id" id="regId"></div>
+      <p id="regWho"></p>
+      <p class="muted" data-t="Keep this number for check-in on the competition day."></p>
+      <button class="btn" id="again" data-t="Register another participant"></button>
+    </div>
+  </div>
+</main>
+<script src="config.js"></script>
+<script src="ot.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s), t = OT.t, C = OT.C;
+  document.documentElement.lang = OT.lang === 'zh' ? 'zh-Hant' : OT.lang;
+  OT.header('Registration');
+  OT.applyI18n();
+  $('#demoBanner').hidden = !OT.demo;
+  $('#intro').textContent = t('Matches are 2 minutes. Depending on the number of participants, the event runs as a group league followed by a knockout, or as a knockout from the start.');
+  $('#natOther').placeholder = t('Country name');
+  // nationality list (Taiwan and Korea first)
+  const top = ['TW', 'KR'], all = OT.countries();
+  $('#nat').innerHTML = `<option value="">${OT.esc(t('Select…'))}</option>` +
+    top.map(c => `<option value="${c}">${OT.flag(c)} ${OT.esc(OT.countryName(c))}</option>`).join('') + '<option disabled>──────────</option>' +
+    all.filter(([c]) => !top.includes(c)).map(([c, n]) => `<option value="${c}">${OT.flag(c)} ${OT.esc(n)}</option>`).join('') +
+    `<option value="OTHER">${OT.esc(t('Other'))}…</option>`;
+  $('#nat').onchange = () => { $('#natOther').hidden = $('#nat').value !== 'OTHER'; };
+  const links = [];
+  links.push(`<a class="btn sm" href="bracket.html">${OT.esc(t('Bracket'))}</a>`);
+  if (C.NOTICE_URL) links.push(`<a class="btn sm" href="${OT.esc(C.NOTICE_URL)}" target="_blank" rel="noopener">${OT.esc(t('Rules'))}</a>`);
+  if (C.SIM_URL) links.push(`<a class="btn sm" href="${OT.esc(C.SIM_URL)}" target="_blank" rel="noopener">${OT.esc(t('Practice simulator'))}</a>`);
+  $('#links').innerHTML = links.join('');
+  // registered count
+  OT.api.state().then(s => {
+    if (!s || !s.ok) return;
+    if (s.settings && s.settings.reg_open === false) { $('#err').textContent = t('Registration is closed.'); $('#go').disabled = true; }
+    const n = s.participants.length;
+    if (n) $('#count').textContent = `${t('Registered')}: ${n}`;
+  }).catch(() => {});
+
+  $('#name').addEventListener('blur', () => { $('#name').value = $('#name').value.replace(/\s+/g, ' ').trim().toUpperCase(); });
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const name = $('#name').value.replace(/\s+/g, ' ').trim().toUpperCase(), dob = $('#dob').value, nat = $('#nat').value,
+          natName = $('#natOther').value.trim(), div = (document.querySelector('input[name=div]:checked') || {}).value;
+    const err = m => { $('#err').textContent = m; };
+    if (!/^[A-Za-z][A-Za-z .'\-]{1,59}$/.test(name)) return err(t('Please enter the name in English letters.'));
+    const y = +dob.slice(0, 4);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || y < 2005 || y > 2022) return err(t('Please enter a valid date of birth.'));
+    if (!nat || (nat === 'OTHER' && !natName)) return err(t('Please choose a nationality.'));
+    if (!div) return err(t('Please choose a division.'));
+    if (!$('#agree').checked) return err(t('Please agree to the data collection.'));
+    err(''); $('#go').disabled = true; $('#go').textContent = t('Sending…');
+    try {
+      const r = await OT.api.register({ name, dob, nationality: nat, nat_name: nat === 'OTHER' ? natName : OT.countryName(nat, true), division: div, lang: OT.lang });
+      if (!r.ok) {
+        err(r.error === 'duplicate' ? t('This participant is already registered.') : r.error === 'closed' ? t('Registration is closed.') :
+            r.error === 'bad_name' ? t('Please enter the name in English letters.') : t('Could not send. Please try again.'));
+      } else {
+        $('#regId').textContent = r.id;
+        $('#regWho').textContent = `${name} · ${t(div === 'junior' ? 'Junior' : 'Senior')}`;
+        $('#formCard').hidden = true; $('#doneCard').hidden = false; window.scrollTo(0, 0);
+      }
+    } catch (x) { err(t('Could not send. Please try again.')); }
+    $('#go').disabled = false; $('#go').textContent = t('Register');
+  };
+  $('#again').onclick = () => { $('#f').reset(); $('#natOther').hidden = true; $('#doneCard').hidden = true; $('#formCard').hidden = false; };
+})();
+</script>
+</body>
+</html>

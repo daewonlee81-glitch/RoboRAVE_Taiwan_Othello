@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Operations · Robot Battle Othello</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+<style>
+.sub{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar select,.toolbar input{width:auto}
+table.pl{width:100%;border-collapse:collapse;font-size:14px;background:#fff}
+table.pl th,table.pl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+table.pl th{font-size:12px;color:var(--mute)}
+table.pl select,table.pl input{padding:5px 6px;border-radius:6px;font-size:13px}
+tr.wd td{opacity:.45}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.queue .match{margin-bottom:8px}
+.qh{font-size:12px;color:var(--mute);margin:12px 0 6px;font-weight:700}
+#runner{position:fixed;inset:0;background:#0b1220e6;display:none;z-index:20;overflow:auto}
+#runner.on{display:block}
+#runner .box{max-width:980px;margin:18px auto;background:#fff;border-radius:16px;padding:18px}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.clock{font-size:min(18vw,120px);font-weight:800;text-align:center;font-variant-numeric:tabular-nums;line-height:1;margin:6px 0}
+.clock.low{color:var(--red)}
+.clock.gold{color:#b7791f}
+.ctl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team{border-radius:14px;padding:12px;color:#fff}
+.team.red{background:var(--red)}.team.blue{background:var(--blue)}
+.team .nm{font-size:20px;font-weight:800;min-height:1.5em}
+.team .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;background:#ffffff22;border-radius:10px;padding:6px 8px}
+.team .row b{font-size:13px;font-weight:600}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:40px;height:40px;border-radius:10px;border:0;background:#fff;color:#111;font-size:20px;font-weight:800;cursor:pointer}
+.step .v{min-width:2.2em;text-align:center;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.team .tot{font-size:44px;font-weight:900;text-align:right;line-height:1}
+.res{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+.res label.f{margin-top:0}
+.wbtns{display:flex;gap:6px;flex-wrap:wrap}
+.wbtns .btn.on{outline:3px solid #111}
+.kpi{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:14px}
+.kpi b{font-size:20px}
+@media (max-width:700px){.grid2,.teams,.res{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main>
+  <div id="demoBanner" class="banner" hidden></div>
+
+  <div class="card narrow" id="login">
+    <h2 data-t="Operations"></h2>
+    <label class="f" for="key" data-t="Admin key"></label>
+    <input type="password" id="key" autocomplete="current-password">
+    <div class="err" id="loginErr"></div>
+    <button class="btn pri big" id="loginBtn" data-t="Sign in"></button>
+  </div>
+
+  <div id="app" hidden>
+    <div class="sub" id="sub"></div>
+    <div class="toolbar">
+      <span data-t="Division"></span>
+      <select id="divSel"><option value="junior"></option><option value="senior"></option></select>
+      <button class="btn sm" id="refresh">⟳ <span data-t="Refresh"></span></button>
+      <span class="count" id="syncTxt"></span>
+    </div>
+
+    <!-- participants -->
+    <section id="sec-participants">
+      <div class="kpi" id="kpi"></div>
+      <div class="toolbar">
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="regOpen"> <span data-t="Registration open"></span></label>
+        <button class="btn sm" id="csv" data-t="Download CSV"></button>
+        <a class="btn sm" href="index.html" target="_blank" data-t="Registration page"></a>
+      </div>
+      <table class="pl"><thead><tr><th>ID</th><th data-t="Name"></th><th data-t="Date of birth"></th><th data-t="Nationality"></th><th data-t="Division"></th><th data-t="Status"></th><th></th></tr></thead><tbody id="plBody"></tbody></table>
+      <h3 data-t="Add participant (walk-in)"></h3>
+      <div class="toolbar">
+        <input type="text" id="aName" placeholder="NAME" style="width:220px">
+        <input type="date" id="aDob">
+        <select id="aNat"></select>
+        <select id="aDiv"><option value="junior"></option><option value="senior"></option></select>
+        <button class="btn pri sm" id="aAdd" data-t="Add"></button>
+      </div>
+    </section>
+
+    <!-- draw -->
+    <section id="sec-draw" hidden>
+      <div class="card">
+        <div class="kpi" id="drawKpi"></div>
+        <div class="toolbar">
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="onlyChecked"> <span data-t="Checked-in players only"></span></label>
+        </div>
+        <div class="grid2">
+          <div><label class="f" data-t="Format"></label>
+            <select id="fmt"><option value="groups"></option><option value="knockout"></option></select></div>
+          <div id="grpOpts"><label class="f" data-t="Groups / advancing per group"></label>
+            <div style="display:flex;gap:8px"><input type="number" id="nGroups" min="2" max="8" value="2"><input type="number" id="nAdv" min="1" max="4" value="2"></div></div>
+        </div>
+        <p class="muted" id="suggestTxt"></p>
+        <div class="toolbar"><button class="btn pri" id="makeDraw" data-t="Make draw"></button><button class="btn" id="clearDraw" data-t="Clear draw"></button></div>
+      </div>
+      <div id="drawPreview" style="margin-top:14px"></div>
+    </section>
+
+    <!-- matches -->
+    <section id="sec-matches" hidden>
+      <div class="grid2">
+        <div class="queue"><div id="queue"></div></div>
+        <div><p class="muted" data-t="Click a match to run it. Results move players on automatically."></p><div id="miniBracket"></div></div>
+      </div>
+    </section>
+
+    <!-- bracket -->
+    <section id="sec-bracket" hidden><div id="bracketView"></div></section>
+  </div>
+</main>
+
+<div id="runner"><div class="box">
+  <div class="rhead"><div><b id="rTitle"></b> <span class="muted" id="rId"></span></div><button class="btn sm" id="rClose" data-t="Close"></button></div>
+  <div class="clock" id="clock">2:00</div>
+  <div class="ctl">
+    <button class="btn pri" id="tStart" data-t="Start"></button>
+    <button class="btn" id="tPause" data-t="Pause"></button>
+    <button class="btn" id="tReset" data-t="Reset 2:00"></button>
+    <button class="btn" id="tGold" data-t="Golden point 1:00"></button>
+  </div>
+  <div class="teams">
+    <div class="team red" id="tmRed"></div>
+    <div class="team blue" id="tmBlue"></div>
+  </div>
+  <div class="res">
+    <div><label class="f" data-t="Result"></label>
+      <select id="method">
+        <option value="points"></option><option value="called"></option><option value="golden"></option>
+        <option value="decision"></option><option value="dq"></option><option value="forfeit"></option><option value="draw"></option>
+      </select></div>
+    <div><label class="f" data-t="Winner"></label><div class="wbtns" id="wbtns"></div></div>
+  </div>
+  <p class="muted" id="rHint" style="font-size:13px"></p>
+  <div class="err" id="rErr"></div>
+  <div class="toolbar" style="justify-content:flex-end"><button class="btn" id="rReopen" data-t="Reopen"></button><button class="btn pri" id="rSave" data-t="Save result"></button></div>
+</div></div>
+
+<script src="config.js"></script>
+<script src="ot.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s), t = OT.t, C = OT.C, esc = OT.esc, num = OT.num;
+  // admin-only translations [繁中, 한국어]
+  const A = {
+    'Admin key': ['管理密碼', '관리자 키'], 'Sign in': ['登入', '로그인'], 'Wrong key.': ['密碼錯誤。', '키가 맞지 않습니다.'],
+    'Participants': ['參賽者', '참가자'], 'Draw': ['抽籤', '대진 편성'], 'Matches': ['比賽', '경기 진행'],
+    'Refresh': ['重新整理', '새로 고침'], 'Registration open': ['開放報名', '신청 받기'], 'Download CSV': ['下載 CSV', 'CSV 받기'], 'Registration page': ['報名頁', '신청 페이지'],
+    'Name': ['姓名', '이름'], 'Status': ['狀態', '상태'], 'registered': ['已報名', '신청'], 'checked-in': ['已報到', '출석'], 'withdrawn': ['退出', '불참'],
+    'Add participant (walk-in)': ['新增參賽者（現場）', '참가자 추가 (현장 등록)'], 'Add': ['新增', '추가'], 'Delete': ['刪除', '삭제'],
+    'Delete this participant?': ['確定刪除此參賽者？', '이 참가자를 삭제할까요?'],
+    'Checked-in players only': ['只用已報到選手', '출석한 선수만'], 'Format': ['賽制', '진행 방식'],
+    'Group league + knockout': ['分組循環賽＋淘汰賽', '조별리그 + 토너먼트'], 'Knockout only': ['淘汰賽', '토너먼트'],
+    'Groups / advancing per group': ['組數／每組晉級人數', '조 수 / 조별 진출 인원'], 'Make draw': ['產生賽程', '대진 만들기'], 'Clear draw': ['清除賽程', '대진 지우기'],
+    'Suggested for {0} players: {1}': ['{0} 位選手建議：{1}', '{0}명 기준 추천: {1}'],
+    '{0} groups, top {1} advance': ['{0} 組，每組前 {1} 名晉級', '{0}개 조, 조 {1}위까지 진출'],
+    'This replaces the current draw and its results. Continue?': ['將取代目前的賽程與成績，確定嗎？', '지금 대진과 결과를 모두 바꿉니다. 계속할까요?'],
+    'Remove the draw for this division?': ['確定清除此組別的賽程？', '이 부문의 대진을 지울까요?'],
+    'Need at least 2 players.': ['至少需要 2 位選手。', '선수가 2명 이상 필요합니다.'],
+    'Ready to play': ['可進行', '진행 가능'], 'Waiting': ['等待中', '대기'], 'Finished': ['已結束', '종료'],
+    'Click a match to run it. Results move players on automatically.': ['點選比賽開始進行，結果會自動晉級。', '경기를 누르면 진행 창이 열립니다. 결과를 저장하면 다음 경기로 자동 진출합니다.'],
+    'Close': ['關閉', '닫기'], 'Start': ['開始', '시작'], 'Pause': ['暫停', '일시정지'], 'Reset 2:00': ['重設 2:00', '2:00 다시'], 'Golden point 1:00': ['黃金得分 1:00', '골든포인트 1:00'],
+    'Blocks': ['方塊', '블록'], 'Warnings': ['警告', '경고'], 'Penalty': ['扣分', '감점'], 'Total': ['總分', '합계'],
+    'Result': ['結果', '결과'], 'Points': ['得分', '점수'], 'Draw (group only)': ['和局（僅分組賽）', '무승부 (조별리그만)'],
+    'Reopen': ['重新編輯', '다시 열기'], 'Save result': ['儲存結果', '결과 저장'], 'Choose the winner.': ['請選擇勝方。', '승자를 고르세요.'],
+    'Saved': ['已儲存', '저장됨'], 'Saving…': ['儲存中…', '저장 중…'], 'Save failed': ['儲存失敗', '저장 실패'],
+    'Total = blocks in your colour + 1 point for each opponent warning after the first − repair penalties. Scores are equal → choose golden point or decision and the winner.':
+      ['總分＝己方顏色方塊＋對手第二次起每次警告 1 分－維修扣分。同分時請選黃金得分或判定並選擇勝方。', '합계 = 우리 색 블록 + 상대 경고(첫 경고 제외) 1개당 1점 − 수리 감점. 동점이면 골든포인트나 판정을 고르고 승자를 지정하세요.'],
+    'active': ['參賽', '참가'], 'Draw made': ['賽程已產生', '대진 완료'],
+  };
+  const T0 = OT.t; const T = (s, ...a) => { const r = OT.lang === 'en' ? s : ((A[s] || [])[OT.lang === 'zh' ? 0 : 1]); return r ? (a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r) : T0(s, ...a); };
+  const tt = el => (el || document).querySelectorAll('[data-t]').forEach(e => { e.textContent = T(e.dataset.t); });
+  OT.header('Operations', { admin: true }); tt();
+  const divName = d => T(d === 'junior' ? 'Junior' : 'Senior');
+  document.querySelectorAll('#divSel option,#aDiv option').forEach(o => o.textContent = divName(o.value));
+  $('#fmt').options[0].textContent = T('Group league + knockout'); $('#fmt').options[1].textContent = T('Knockout only');
+  const mNames = { points: T('Points'), called: T('Called game'), golden: T('Golden point'), decision: T('Decision'), dq: T('Disqualification'), forfeit: T('Forfeit'), draw: T('Draw (group only)') };
+  [...$('#method').options].forEach(o => o.textContent = mNames[o.value]);
+  $('#rHint').textContent = T('Total = blocks in your colour + 1 point for each opponent warning after the first − repair penalties. Scores are equal → choose golden point or decision and the winner.');
+  if (OT.demo) { $('#demoBanner').hidden = false; $('#demoBanner').textContent = t('Demo mode — data is saved only in this browser.') + ' Admin key: demo'; }
+
+  let KEY = sessionStorage.getItem('ot.key') || '', S = null, tab = 'participants', div = 'junior';
+  const SUBS = [['participants', 'Participants'], ['draw', 'Draw'], ['matches', 'Matches'], ['bracket', 'Bracket']];
+  $('#sub').innerHTML = SUBS.map(([k, n]) => `<button class="btn sm" data-s="${k}">${esc(T(n))}</button>`).join('');
+  $('#sub').onclick = e => { const b = e.target.closest('[data-s]'); if (b) { tab = b.dataset.s; render(); } };
+  $('#divSel').onchange = e => { div = e.target.value; render(); };
+
+  async function api(op, data) {
+    $('#syncTxt').textContent = T('Saving…');
+    try {
+      const r = await OT.api.admin(KEY, op, data);
+      if (!r.ok) throw new Error(r.error || 'error');
+      S = r; $('#syncTxt').textContent = `${T('Saved')} ${new Date().toLocaleTimeString()}`; render(); return r;
+    } catch (e) { $('#syncTxt').textContent = `${T('Save failed')}: ${e.message}`; throw e; }
+  }
+  async function login() {
+    $('#loginErr').textContent = '';
+    try {
+      const r = await OT.api.admin(KEY, 'state');
+      if (!r.ok) { $('#loginErr').textContent = T('Wrong key.'); sessionStorage.removeItem('ot.key'); return; }
+      sessionStorage.setItem('ot.key', KEY); S = r; $('#login').hidden = true; $('#app').hidden = false; render();
+    } catch (e) { $('#loginErr').textContent = e.message; }
+  }
+  $('#loginBtn').onclick = () => { KEY = $('#key').value.trim(); login(); };
+  $('#key').onkeydown = e => { if (e.key === 'Enter') $('#loginBtn').click(); };
+  $('#refresh').onclick = () => api('state');
+  if (KEY) login();
+  setInterval(() => { if (S && !$('#runner').classList.contains('on')) OT.api.admin(KEY, 'state').then(r => { if (r.ok) { S = r; render(); } }).catch(() => {}); }, 30000);
+
+  const Pmap = () => new Map(S.participants.map(p => [p.id, p]));
+  const active = d => S.participants.filter(p => p.division === d && p.status !== 'withdrawn' && (!$('#onlyChecked').checked || p.status === 'checked-in'));
+  const drawOf = d => S.draws.find(x => x.division === d);
+
+  function render() {
+    if (!S) return;
+    document.querySelectorAll('#sub [data-s]').forEach(b => b.classList.toggle('pri', b.dataset.s === tab));
+    SUBS.forEach(([k]) => $('#sec-' + k).hidden = k !== tab);
+    $('#regOpen').checked = !!(S.settings && S.settings.reg_open);
+    if (tab === 'participants') renderParticipants();
+    if (tab === 'draw') renderDraw();
+    if (tab === 'matches') renderMatches();
+    if (tab === 'bracket') $('#bracketView').innerHTML = OT.renderDivision(div, S, { click: true });
+  }
+
+  /* ---------- participants ---------- */
+  const natOpts = sel => `<option value="">—</option>` + OT.countries().map(([c, n]) => `<option value="${c}"${c === sel ? ' selected' : ''}>${OT.flag(c)} ${esc(n)}</option>`).join('') + `<option value="OTHER"${sel === 'OTHER' ? ' selected' : ''}>${esc(t('Other'))}</option>`;
+  $('#aNat').innerHTML = natOpts('');
+  function renderParticipants() {
+    const L = S.participants.filter(p => p.division === div);
+    const c = s => L.filter(p => p.status === s).length;
+    $('#kpi').innerHTML = `<span>${esc(divName(div))} · <b>${L.length}</b></span><span>${esc(T('checked-in'))}: <b>${c('checked-in')}</b></span><span>${esc(T('withdrawn'))}: <b>${c('withdrawn')}</b></span><span class="muted">${esc(T('Junior'))} ${S.participants.filter(p => p.division === 'junior').length} · ${esc(T('Senior'))} ${S.participants.filter(p => p.division === 'senior').length}</span>`;
+    $('#plBody').innerHTML = L.map(p => `<tr class="${p.status === 'withdrawn' ? 'wd' : ''}" data-id="${esc(p.id)}">
+      <td>${esc(p.id)}</td><td><input type="text" data-k="name" value="${esc(p.name)}"></td><td>${esc(p.dob)}</td>
+      <td>${OT.flag(p.nationality)} ${esc(OT.natLabel(p))}</td>
+      <td><select data-k="division"><option value="junior"${p.division === 'junior' ? ' selected' : ''}>${esc(divName('junior'))}</option><option value="senior"${p.division === 'senior' ? ' selected' : ''}>${esc(divName('senior'))}</option></select></td>
+      <td><select data-k="status">${['registered', 'checked-in', 'withdrawn'].map(s => `<option value="${s}"${p.status === s ? ' selected' : ''}>${esc(T(s))}</option>`).join('')}</select></td>
+      <td><button class="btn sm" data-del="${esc(p.id)}">${esc(T('Delete'))}</button></td></tr>`).join('');
+  }
+  $('#plBody').addEventListener('change', e => {
+    const tr = e.target.closest('tr'), k = e.target.dataset.k; if (!tr || !k) return;
+    let v = e.target.value; if (k === 'name') v = v.replace(/\s+/g, ' ').trim().toUpperCase();
+    api('participant', { p: { id: tr.dataset.id, [k]: v } });
+  });
+  $('#plBody').addEventListener('click', e => { const id = e.target.dataset.del; if (id && confirm(T('Delete this participant?'))) api('delete', { id }); });
+  $('#regOpen').onchange = e => api('settings', { reg_open: e.target.checked });
+  $('#aAdd').onclick = () => {
+    const name = $('#aName').value.replace(/\s+/g, ' ').trim().toUpperCase(), nat = $('#aNat').value;
+    if (!name) return;
+    api('participant', { p: { name, dob: $('#aDob').value, nationality: nat || 'OTHER', nat_name: nat && nat !== 'OTHER' ? OT.countryName(nat, true) : '', division: $('#aDiv').value, status: 'checked-in' } })
+      .then(() => { $('#aName').value = ''; $('#aDob').value = ''; });
+  };
+  $('#csv').onclick = () => {
+    const H = ['id', 'name', 'dob', 'nationality', 'nat_name', 'division', 'status', 'created'];
+    const csv = '﻿' + [H.join(',')].concat(S.participants.map(p => H.map(h => `"${String(p[h] == null ? '' : p[h]).replace(/"/g, '""')}"`).join(','))).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'othello_participants.csv'; a.click();
+  };
+
+  /* ---------- draw ---------- */
+  $('#fmt').onchange = () => { $('#grpOpts').style.visibility = $('#fmt').value === 'groups' ? 'visible' : 'hidden'; };
+  $('#onlyChecked').onchange = renderDraw;
+  let fmtTouched = false; ['#fmt', '#nGroups', '#nAdv'].forEach(s => $(s).addEventListener('input', () => fmtTouched = true));
+  function renderDraw() {
+    const n = active(div).length, sg = OT.suggest(n), d = drawOf(div);
+    if (!fmtTouched) { $('#fmt').value = sg.format; if (sg.groups) $('#nGroups').value = sg.groups; $('#nAdv').value = sg.adv || 2; $('#fmt').onchange(); }
+    $('#drawKpi').innerHTML = `<span>${esc(divName(div))} · ${esc(T('active'))} <b>${n}</b></span>` + (d ? `<span class="chip">${esc(T('Draw made'))}: ${esc(d.format === 'groups' ? T('Group league + knockout') : T('Knockout only'))}</span>` : '');
+    $('#suggestTxt').textContent = T('Suggested for {0} players: {1}', n, sg.format === 'groups' ? T('{0} groups, top {1} advance', sg.groups, sg.adv) : T('Knockout only'));
+    $('#drawPreview').innerHTML = OT.renderDivision(div, S, {});
+  }
+  $('#makeDraw').onclick = async () => {
+    const P = active(div);
+    if (P.length < 2) return alert(T('Need at least 2 players.'));
+    if (drawOf(div) && !confirm(T('This replaces the current draw and its results. Continue?'))) return;
+    const d = OT.makeDraw(div, P, { format: $('#fmt').value, groups: +$('#nGroups').value, adv: +$('#nAdv').value });
+    OT.propagate(div, { format: d.format, json: d.json }, d.matches); // byes
+    await api('draw', { division: div, format: d.format, json: d.json, matches: d.matches });
+  };
+  $('#clearDraw').onclick = () => { if (drawOf(div) && confirm(T('Remove the draw for this division?'))) api('draw', { division: div, format: '', matches: [] }); };
+
+  /* ---------- matches ---------- */
+  const real = v => v && !String(v).startsWith('@');
+  function renderMatches() {
+    const P = Pmap(), M = S.matches.filter(m => m.division === div);
+    const order = m => (m.stage === 'G' ? 0 : 100) + (+m.round || 0) * 10 + (m.grp === '3P' ? 5 : 0);
+    const ready = M.filter(m => m.status !== 'done' && real(m.red) && real(m.blue)).sort((a, b) => order(a) - order(b) || String(a.grp).localeCompare(b.grp) || a.slot - b.slot);
+    const wait = M.filter(m => m.status !== 'done' && !(real(m.red) && real(m.blue)));
+    const done = M.filter(m => m.status === 'done' && m.method !== 'bye').sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+    const label = m => m.stage === 'G' ? `${t('Group')} ${m.grp} · ${t('Round')} ${m.round}` : m.grp === '3P' ? t('3rd place') : OT.roundName(+m.round, (JSON.parse(drawOf(div).json || '{}').rounds) || 1);
+    const block = (title, L) => `<div class="qh">${esc(title)} (${L.length})</div>` + L.map(m => `<div class="muted" style="font-size:12px">${esc(label(m))}</div>${OT.matchLine(m, P, { click: true })}`).join('');
+    $('#queue').innerHTML = drawOf(div) ? block(T('Ready to play'), ready) + block(T('Waiting'), wait) + block(T('Finished'), done) : `<p class="muted">${esc(t('Not drawn yet'))}</p>`;
+    $('#miniBracket').innerHTML = OT.renderDivision(div, S, { click: true });
+  }
+  document.addEventListener('click', e => { const m = e.target.closest('.match.clickable'); if (m) openRunner(m.dataset.id); });
+
+  /* ---------- match runner ---------- */
+  let R = null, tm = { left: C.MATCH_SEC || 120, run: false, last: 0, gold: false };
+  const fmtT = x => { const s = Math.ceil(Math.max(0, x)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  let ac = null; const beep = (f, d) => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .15; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {} };
+  function drawClock() { const c = $('#clock'); c.textContent = fmtT(tm.left); c.classList.toggle('low', tm.left <= 10 && !tm.gold); c.classList.toggle('gold', tm.gold); }
+  function tick(now) {
+    if (!tm.run) return;
+    const dt = (now - tm.last) / 1000; tm.last = now; const before = tm.left; tm.left -= dt;
+    if (Math.ceil(before) !== Math.ceil(tm.left) && tm.left <= 10 && tm.left > 0) beep(880, .08);
+    if (tm.left <= 0) { tm.left = 0; tm.run = false; beep(440, .9); }
+    drawClock(); if (tm.run) requestAnimationFrame(tick);
+  }
+  $('#tStart').onclick = () => { if (tm.run || tm.left <= 0) return; tm.run = true; tm.last = performance.now(); beep(1200, .15); requestAnimationFrame(tick); if (R && R.m.status !== 'live' && R.m.status !== 'done') api('matches', { rows: [{ id: R.m.id, status: 'live' }] }).catch(() => {}); };
+  $('#tPause').onclick = () => { tm.run = false; };
+  $('#tReset').onclick = () => { tm.run = false; tm.gold = false; tm.left = C.MATCH_SEC || 120; drawClock(); };
+  $('#tGold').onclick = () => { tm.run = false; tm.gold = true; tm.left = C.GOLDEN_SEC || 60; drawClock(); if (R) { $('#method').value = 'golden'; sync(); } };
+
+  function openRunner(id) {
+    const m = S.matches.find(x => x.id === id); if (!m || !real(m.red) || !real(m.blue)) return;
+    const P = Pmap();
+    R = { m, v: { red: { b: m.status === 'done' ? num(m.red_score) || 0 : 0, w: num(m.red_warn) || 0, pen: 0 }, blue: { b: m.status === 'done' ? num(m.blue_score) || 0 : 0, w: num(m.blue_warn) || 0, pen: 0 } }, winner: m.winner || '', method: m.method || 'points', locked: m.status === 'done' };
+    if (m.status === 'done') { R.v.red.b -= Math.max(0, R.v.blue.w - 1); R.v.blue.b -= Math.max(0, R.v.red.w - 1); R.v.red.b = Math.max(0, R.v.red.b); R.v.blue.b = Math.max(0, R.v.blue.b); }
+    $('#rTitle').innerHTML = m.stage === 'G' ? `${esc(t('Group'))} ${esc(m.grp)} · ${esc(t('Round'))} ${esc(m.round)}` : m.grp === '3P' ? esc(t('3rd place')) : esc(OT.roundName(+m.round, JSON.parse(drawOf(m.division).json || '{}').rounds || 1));
+    $('#rId').textContent = `${divName(m.division)} · ${m.id}`;
+    [...$('#method').options].forEach(o => o.hidden = o.value === 'draw' && m.stage !== 'G');
+    $('#method').value = R.method;
+    tm = { left: C.MATCH_SEC || 120, run: false, last: 0, gold: false }; drawClock();
+    const team = (side, id) => `<div class="nm">${OT.nameOf(id, P)}</div>
+      ${[['b', 'Blocks', 0, C.CALLED || 11], ['w', 'Warnings', 0, 9], ['pen', 'Penalty', 0, 9]].map(([k, n, lo, hi]) => `<div class="row"><b>${esc(T(n))}</b><div class="step"><button data-s="${side}" data-k="${k}" data-d="-1" data-lo="${lo}" data-hi="${hi}">−</button><span class="v" id="v-${side}-${k}"></span><button data-s="${side}" data-k="${k}" data-d="1" data-lo="${lo}" data-hi="${hi}">+</button></div></div>`).join('')}
+      <div class="row"><b>${esc(T('Total'))}</b><span class="tot" id="tot-${side}"></span></div>`;
+    $('#tmRed').innerHTML = team('red', m.red); $('#tmBlue').innerHTML = team('blue', m.blue);
+    $('#runner').classList.add('on'); $('#rErr').textContent = ''; sync();
+  }
+  const total = side => { const o = side === 'red' ? 'blue' : 'red'; return Math.max(0, R.v[side].b + Math.max(0, R.v[o].w - 1) - R.v[side].pen); };
+  function sync() {
+    for (const s of ['red', 'blue']) { for (const k of ['b', 'w', 'pen']) $(`#v-${s}-${k}`).textContent = R.v[s][k]; $(`#tot-${s}`).textContent = total(s); }
+    const P = Pmap(), m = R.m, meth = $('#method').value, tr = total('red'), tb = total('blue');
+    if (meth === 'points' || meth === 'called') { R.winner = tr > tb ? m.red : tb > tr ? m.blue : ''; if (R.v.red.b === (C.CALLED || 11) || R.v.blue.b === (C.CALLED || 11)) { if (meth === 'points') { $('#method').value = 'called'; } } }
+    if (meth === 'draw') R.winner = '';
+    $('#wbtns').innerHTML = [m.red, m.blue].map((id, i) => `<button class="btn ${i ? '' : 'red'}${R.winner === id ? ' on' : ''}" data-w="${esc(id)}" style="${i ? 'background:var(--blue);color:#fff;border-color:var(--blue)' : ''}">${OT.nameOf(id, P)}</button>`).join('');
+    $('#rSave').disabled = R.locked; $('#rReopen').hidden = !R.locked;
+    document.querySelectorAll('#runner .step button, #method, #wbtns button').forEach(b => b.disabled = R.locked);
+  }
+  $('#runner').addEventListener('click', e => {
+    const b = e.target.closest('.step button');
+    if (b && R && !R.locked) { const v = R.v[b.dataset.s]; v[b.dataset.k] = Math.max(+b.dataset.lo, Math.min(+b.dataset.hi, v[b.dataset.k] + +b.dataset.d)); sync(); return; }
+    const w = e.target.closest('[data-w]');
+    if (w && R && !R.locked) {
+      const pick = w.dataset.w, meth = $('#method').value, tr = total('red'), tb = total('blue'), auto = tr > tb ? R.m.red : tb > tr ? R.m.blue : '';
+      if (meth === 'points' || meth === 'called' || meth === 'draw') { if (!auto) $('#method').value = 'golden'; else if (pick !== auto) $('#method').value = 'decision'; }
+      R.winner = pick; sync();
+    }
+  });
+  $('#method').onchange = () => sync();
+  $('#rReopen').onclick = () => { R.locked = false; sync(); };
+  $('#rClose').onclick = () => { tm.run = false; $('#runner').classList.remove('on'); R = null; render(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#runner').classList.contains('on')) $('#rClose').click(); if (e.key === ' ' && $('#runner').classList.contains('on') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') { e.preventDefault(); tm.run ? $('#tPause').click() : $('#tStart').click(); } });
+  $('#rSave').onclick = async () => {
+    const m = R.m, meth = $('#method').value;
+    if (meth !== 'draw' && !R.winner) { $('#rErr').textContent = T('Choose the winner.'); return; }
+    const row = Object.assign({}, m, { red_score: total('red'), blue_score: total('blue'), red_warn: R.v.red.w, blue_warn: R.v.blue.w, winner: meth === 'draw' ? '' : R.winner, method: meth === 'draw' ? 'points' : meth, status: 'done' });
+    const all = S.matches.map(x => x.id === m.id ? row : Object.assign({}, x));
+    const changed = OT.propagate(m.division, drawOf(m.division), all);
+    const rows = [row].concat(changed.filter(x => x.id !== m.id));
+    $('#rSave').disabled = true;
+    try { await api('matches', { rows }); tm.run = false; $('#runner').classList.remove('on'); R = null; render(); }
+    catch (e) { $('#rErr').textContent = T('Save failed') + ': ' + e.message; $('#rSave').disabled = false; }
+  };
+})();
+</script>
+</body>
+</html>

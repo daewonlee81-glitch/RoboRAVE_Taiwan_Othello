@@ -1,0 +1,65 @@
+# RoboRAVE Taiwan Open 2026 · 로봇배틀 오셀로 참가신청 · 대진표 · 경기 운영
+
+정적 웹(GitHub Pages) + Google Apps Script + Google 시트로 동작합니다. 서버는 따로 없습니다.
+
+| 페이지 | 용도 | 공개 범위 |
+|---|---|---|
+| `index.html` | 참가 신청 (영문 이름 · 생년월일 · 국적 · 부문) | 누구나 |
+| `bracket.html` | 대진표 · 조별 순위 · 최종 순위 (20초마다 새로 고침) | 누구나 · 이름과 국적만 표시 |
+| `admin.html` | 경기 운영: 참가자 관리 · 대진 편성 · 경기 진행(2분 타이머) · 결과 입력 | 관리자 키 필요 |
+
+화면 언어: English · 繁體中文 · 한국어 (오른쪽 위에서 바꾸거나 주소에 `?lang=en|zh|ko`).
+
+## 1. 구글 시트 + Apps Script 연결 (처음 한 번)
+
+1. 새 구글 시트를 만듭니다 (예: `RoboRAVE Taiwan Open 2026 오셀로`).
+2. **확장 프로그램 → Apps Script**를 열고, 이 저장소의 `apps-script/Code.gs` 내용을 통째로 붙여 넣고 저장합니다.
+3. 위쪽 함수 목록에서 `setup`을 고르고 **실행**합니다 (처음엔 권한 승인). 시트에 `Participants` · `Matches` · `Draws` 탭이 생깁니다.
+   실행 로그에 `ADMIN_KEY = ……`가 나옵니다. 이것이 운영 페이지 비밀번호입니다.
+   (바꾸려면 **프로젝트 설정 → 스크립트 속성 → ADMIN_KEY**를 고칩니다.)
+4. **배포 → 새 배포 → 유형: 웹 앱**
+   - 실행: **나**
+   - 액세스 권한: **모든 사용자**
+5. 나온 웹 앱 URL(`https://script.google.com/macros/s/…/exec`)을 `config.js`의 `API_URL`에 넣습니다.
+
+> Code.gs를 고친 뒤에는 **배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포**를 해야 반영됩니다 (URL은 그대로).
+
+`API_URL`이 비어 있으면 **데모 모드**로 동작합니다. 데이터가 그 브라우저에만 저장되고, 관리자 키는 `demo`입니다. 화면 위에 노란 안내가 보입니다.
+
+## 2. 로고
+
+`logo.png`(RoboRAVE Taiwan 로고)가 모든 페이지 왼쪽 위와 브라우저 탭에 나옵니다. 바꾸려면 같은 이름으로 덮어쓰면 됩니다.
+
+## 3. GitHub Pages 배포
+
+저장소 **Settings → Pages → Build and deployment**에서 Source를 **Deploy from a branch**, Branch를 **main / (root)**로 두고 저장합니다.
+1~2분 뒤 주소가 열립니다.
+
+- 신청: `https://daewonlee81-glitch.github.io/RoboRAVE_Taiwan_Othello/`
+- 대진표: `https://daewonlee81-glitch.github.io/RoboRAVE_Taiwan_Othello/bracket.html`
+- 운영: `https://daewonlee81-glitch.github.io/RoboRAVE_Taiwan_Othello/admin.html`
+
+## 4. 대회 당일 운영 순서
+
+1. **참가자** 탭: 도착한 선수의 상태를 `출석`으로 바꿉니다. 현장 등록은 아래 "참가자 추가"로 넣습니다. 신청을 마감하려면 "신청 받기"를 끕니다.
+2. **대진 편성** 탭: 부문(주니어/시니어)을 고르고, 필요하면 "출석한 선수만"을 켭니다.
+   - 추천 방식: 8명 미만은 토너먼트, 8명 이상은 조별리그(약 4명씩, 조 2위까지) 후 토너먼트입니다. 조 수와 진출 인원은 바꿀 수 있습니다.
+   - 같은 국적끼리는 되도록 다른 조로 나눕니다. 토너먼트 1회전에서 같은 조끼리 만나지 않게 배치합니다. 인원이 2의 거듭제곱이 아니면 상위 시드에 부전승이 생깁니다.
+3. **경기 진행** 탭: "진행 가능" 목록에서 경기를 누르면 진행 창이 열립니다.
+   - 2:00 타이머(스페이스바로 시작/정지, 마지막 10초 알림음), 골든포인트 1:00을 씁니다.
+   - 블록(우리 색 블록 수), 경고, 감점(수리 시간)을 입력합니다. 합계 = 블록 + 상대 경고(첫 경고 제외) 1개당 1점 − 감점입니다.
+   - 결과 방식은 점수, 콜드게임(11개), 골든포인트, 판정, 실격, 기권 중에서 고릅니다. 무승부는 조별리그에서만 됩니다. 동점이면 승자를 직접 지정합니다.
+   - **결과 저장**을 누르면 조 순위가 계산됩니다. 조별리그가 끝나면 토너먼트 자리(예: A조 1위)에 선수가 자동으로 들어가고, 다음 라운드와 3·4위전으로 자동 진출합니다.
+   - 저장한 경기도 "다시 열기"로 고칠 수 있습니다. 결과가 바뀌면 뒤 경기들이 다시 계산됩니다.
+4. **대진표** 탭이나 공개 `bracket.html`을 프로젝터로 띄워 두면 진행 상황이 보입니다. 결승이 끝나면 1~4위가 위쪽에 표시됩니다.
+
+조별리그 순위는 승점(승 3 · 무 1 · 패 0) → 득실차 → 다득점 → 경고 적은 순 → 승자승 순으로 정합니다.
+
+## 시트 구조
+
+- `Participants`: id(RT-0001…), created, name, dob, nationality(ISO 2자리 또는 OTHER), nat_name, division(junior/senior), status(registered/checked-in/withdrawn), note, lang
+- `Matches`: id, division, stage(G=조별 · K=토너먼트), grp, round, slot, red, blue, red_score, blue_score, red_warn, blue_warn, winner, method, status(pending/live/done), arena, updated
+- `Draws`: division, format(groups/knockout), json(조 구성 · 토너먼트 1회전 자리), updated
+
+시트를 직접 고쳐도 되지만, 대진·결과는 운영 페이지에서 고치는 것이 안전합니다(다음 라운드 자동 계산 때문).
+생년월일은 공개 API로 나가지 않고 관리자 키로만 볼 수 있습니다.

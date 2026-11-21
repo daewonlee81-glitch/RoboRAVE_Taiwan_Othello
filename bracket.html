@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bracket · Robot Battle Othello · RoboRAVE Taiwan Open 2026</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"></header>
+<main>
+  <div id="demoBanner" class="banner" hidden data-t="Demo mode — data is saved only in this browser."></div>
+  <div class="hero"><h1 data-t="Bracket"></h1><span class="chip" data-t="Robot Battle Othello"></span><span class="count" id="upd"></span></div>
+  <div class="divtabs" id="divtabs"></div>
+  <div id="view"><p class="muted">…</p></div>
+</main>
+<script src="config.js"></script>
+<script src="ot.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s), t = OT.t;
+  document.documentElement.lang = OT.lang === 'zh' ? 'zh-Hant' : OT.lang;
+  OT.header('Bracket'); OT.applyI18n();
+  $('#demoBanner').hidden = !OT.demo;
+  const q = new URLSearchParams(location.search);
+  let div = q.get('div') === 'senior' ? 'senior' : 'junior', S = null;
+  function tabs() {
+    $('#divtabs').innerHTML = ['junior', 'senior'].map(d => {
+      const n = S ? S.participants.filter(p => p.division === d).length : 0;
+      return `<button class="btn sm ${d === div ? 'pri' : ''}" data-d="${d}">${OT.esc(t(d === 'junior' ? 'Junior' : 'Senior'))} (${n})</button>`;
+    }).join('');
+  }
+  $('#divtabs').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; div = b.dataset.d; const u = new URL(location.href); u.searchParams.set('div', div); history.replaceState(null, '', u); render(); };
+  function render() {
+    tabs();
+    if (!S) return;
+    let h = OT.renderDivision(div, S, {});
+    const P = S.participants.filter(p => p.division === div);
+    if (!S.draws.find(d => d.division === div) && P.length) h += `<div class="card" style="margin-top:10px"><h4>${OT.esc(t('Registered'))}: ${P.length}</h4><div style="columns:2 220px;font-size:14px">${P.map(p => `<div>${OT.flag(p.nationality)} ${OT.esc(p.name)}</div>`).join('')}</div></div>`;
+    $('#view').innerHTML = h;
+    $('#upd').textContent = `${t('Last update')} ${new Date().toLocaleTimeString()} · ${t('Auto-refresh every 20 s')}`;
+  }
+  async function load() { try { const s = await OT.api.state(); if (s && s.ok) { S = s; render(); } } catch (e) {} }
+  load(); setInterval(load, 20000);
+  window.addEventListener('storage', load); // demo mode: follow the operations page in another tab
+})();
+</script>
+</body>
+</html>
