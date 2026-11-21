@@ -74,7 +74,7 @@ tr.wd td{opacity:.45}
       <div class="toolbar">
         <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="regOpen"> <span data-t="Registration open"></span></label>
         <select id="pFilt"><option value="all"></option><option value="junior"></option><option value="senior"></option></select>
-        <input type="search" id="pSearch" style="width:180px">
+        <input type="search" id="pSearch" style="width:240px">
         <button class="btn sm" id="csv" data-t="Download CSV"></button>
         <button class="btn sm" id="pPrint" data-t="Print list"></button>
         <a class="btn sm" href="index.html" target="_blank" data-t="Registration page"></a>
@@ -208,7 +208,7 @@ tr.wd td{opacity:.45}
     'Saved': ['已儲存', '저장됨'], 'Saving…': ['儲存中…', '저장 중…'], 'Save failed': ['儲存失敗', '저장 실패'],
     'Total = blocks in your colour + 1 point for each opponent warning after the first − repair penalties. Scores are equal → choose golden point or decision and the winner.':
       ['總分＝己方顏色方塊＋對手第二次起每次警告 1 分－維修扣分。同分時請選黃金得分或判定並選擇勝方。', '합계 = 우리 색 블록 + 상대 경고(첫 경고 제외) 1개당 1점 − 수리 감점. 동점이면 골든포인트나 판정을 고르고 승자를 지정하세요.'],
-    'All divisions': ['全部組別', '전체 부문'], 'Search name or ID': ['搜尋姓名或編號', '이름·번호 검색'], 'Print list': ['列印名單', '명단 인쇄'],
+    'All divisions': ['全部組別', '전체 부문'], 'Search by name or date of birth': ['依姓名或出生日期搜尋', '이름 또는 생년월일로 검색'], 'Print list': ['列印名單', '명단 인쇄'],
     'All participants': ['全部參賽者', '전체 참가자'], 'Showing {0} of {1}': ['顯示 {0} / {1}', '{1}명 중 {0}명 표시'],
     'active': ['參賽', '참가'], 'Draw made': ['賽程已產生', '대진 완료'],
     'Schedule': ['賽程時間表', '일정'], 'Event timetable': ['大會時間表', '대회 일정표'], 'Match timetable': ['比賽時間表', '경기 시간표'],
@@ -235,7 +235,7 @@ tr.wd td{opacity:.45}
   OT.header('Operations', { admin: true }); tt();
   const divName = d => T(d === 'junior' ? 'Junior' : 'Senior');
   document.querySelectorAll('#divSel option,#aDiv option,#pFilt option').forEach(o => o.textContent = o.value === 'all' ? T('All divisions') : divName(o.value));
-  $('#pSearch').placeholder = T('Search name or ID');
+  $('#pSearch').placeholder = T('Search by name or date of birth') + ' (LEE / 2016-11-22)';
   $('#fmt').options[0].textContent = T('Group league + knockout'); $('#fmt').options[1].textContent = T('Knockout only');
   const mNames = { points: T('Points'), called: T('Called game'), golden: T('Golden point'), decision: T('Decision'), dq: T('Disqualification'), forfeit: T('Forfeit'), draw: T('Draw (group only)') };
   [...$('#method').options].forEach(o => o.textContent = mNames[o.value]);
@@ -294,8 +294,11 @@ tr.wd td{opacity:.45}
   let pFilt = 'all';
   function renderParticipants() {
     const all = S.participants.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    const q = $('#pSearch').value.trim().toUpperCase();
-    const L = all.filter(p => (pFilt === 'all' || p.division === pFilt) && (!q || String(p.name).toUpperCase().includes(q) || String(p.id).toUpperCase().includes(q)));
+    // search: name letters and/or date-of-birth digits (2016-11-22, 20161122, 2016.11.22, 2016, 1122 …)
+    const nm = v => String(v || '').replace(/[^A-Za-z가-힣']/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+    const raw = $('#pSearch').value.trim(), qn = nm(raw), qd = raw.replace(/\D/g, '');
+    const hit = p => (!qn || nm(p.name).includes(qn)) && (!qd || String(p.dob).replace(/\D/g, '').includes(qd));
+    const L = all.filter(p => (pFilt === 'all' || p.division === pFilt) && hit(p));
     const n = (d, s) => all.filter(p => (!d || p.division === d) && (!s || p.status === s)).length;
     const act = d => all.filter(p => (!d || p.division === d) && p.status !== 'withdrawn').length;
     $('#kpi').innerHTML = `<span>${esc(T('All participants'))} · <b>${act()}</b></span>` +
