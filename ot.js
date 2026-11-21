@@ -94,6 +94,16 @@
     'No registration matches this number and date of birth.': ['找不到符合此編號與出生日期的報名資料。', '신청 번호와 생년월일이 맞는 신청이 없습니다.'],
     'Signed in as': ['目前登入', '확인된 참가자'],
     'Sign out': ['登出', '나가기'],
+    'Participants': ['參賽名單', '참가자 명단'],
+    'Only registered participants can view the participant list. Enter your registration number and date of birth.': ['只有已報名的參賽者可以查看參賽名單。請輸入報名編號與出生日期。', '참가자 명단은 참가자만 볼 수 있습니다. 신청 번호와 생년월일을 입력하세요.'],
+    'View participants': ['查看參賽名單', '명단 보기'],
+    'Name': ['姓名', '이름'],
+    'Status': ['狀態', '상태'],
+    'registered': ['已報名', '신청'],
+    'checked-in': ['已報到', '출석'],
+    'Total': ['合計', '합계'],
+    'No participants yet.': ['目前尚無參賽者。', '아직 참가자가 없습니다.'],
+    'Your name is highlighted. If anything is wrong, contact the organizer.': ['您的名字以醒目標示。如資料有誤，請聯絡主辦單位。', '내 이름은 강조 표시됩니다. 정보가 틀리면 주최 측에 알려 주세요.'],
   };
   OT.t = (s, ...a) => { const r = lang === 'en' ? s : ((TR[s] || [])[lang === 'zh' ? 0 : 1] || s); return a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r; };
   OT.applyI18n = root => (root || document).querySelectorAll('[data-t]').forEach(e => { e.textContent = OT.t(e.dataset.t); });
@@ -104,7 +114,7 @@
   /* ===================== page header ===================== */
   OT.header = (active, opts) => {
     const el = document.querySelector('header.top'); if (!el) return;
-    const nav = [['index.html', 'Registration'], ['bracket.html', 'Bracket']].concat(opts && opts.admin ? [['admin.html', 'Operations']] : []);
+    const nav = [['index.html', 'Registration'], ['participants.html', 'Participants'], ['bracket.html', 'Bracket']].concat(opts && opts.admin ? [['admin.html', 'Operations']] : []);
     el.innerHTML = `<div class="in"><a class="brand" href="index.html" style="text-decoration:none;color:inherit"><img class="logo" src="logo.png" alt="RoboRAVE Taiwan Open" onerror="this.style.display='none'"><div class="tx"><b>${OT.esc(C.EVENT || 'RoboRAVE Taiwan Open')}</b><span>${OT.esc(OT.t('Robot Battle Othello'))}${C.DATE ? ' · ' + OT.esc(C.DATE) : ''}</span></div></a>` +
       `<nav class="tabs">${nav.map(([h, k]) => `<a href="${h}" class="${k === active ? 'on' : ''}">${OT.esc(OT.t(k))}</a>`).join('')}</nav><div class="langs"></div></div>`;
     OT.langSwitch(el.querySelector('.langs'));
@@ -128,7 +138,7 @@
   const demo = () => dget() || { participants: [], draws: [], matches: [], settings: { reg_open: true, bracket_public: false }, key: 'demo' };
   const nextId = P => 'RT-' + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(4, '0');
   const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
-  const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, count: act.length, me: me || null, participants: admin ? d.participants : open ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
+  const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, count: act.length, me: me || null, participants: admin ? d.participants : me ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
   async function call(body) {
     if (OT.demo) return demoCall(body);
     const r = await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' });

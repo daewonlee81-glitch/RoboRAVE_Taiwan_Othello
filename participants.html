@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Participants · Robot Battle Othello · RoboRAVE Taiwan Open 2026</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  table.pl{width:100%;border-collapse:collapse;font-size:15px}
+  table.pl th,table.pl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+  table.pl th{color:var(--mute);font-weight:600;font-size:12px}
+  table.pl td.n{color:var(--mute);width:36px;text-align:center}
+  table.pl tr.me td{background:#fff8d6}
+  .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;background:#eef1f5;color:var(--mute)}
+  .pill.ok{background:#e3f6ea;color:#16794a}
+  .plh{display:flex;align-items:baseline;gap:10px;margin:18px 0 6px}
+  .plh h2{margin:0}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<main>
+  <div id="demoBanner" class="banner" hidden data-t="Demo mode — data is saved only in this browser."></div>
+  <div class="hero"><h1 data-t="Participants"></h1><span class="chip" data-t="Robot Battle Othello"></span><span class="count" id="upd"></span></div>
+  <div class="card narrow" id="gate" hidden>
+    <p class="muted" data-t="Only registered participants can view the participant list. Enter your registration number and date of birth."></p>
+    <form id="gf" novalidate>
+      <label class="f" for="gid" data-t="Registration number"></label>
+      <input type="text" id="gid" placeholder="RT-0001" autocapitalize="characters" spellcheck="false" maxlength="10">
+      <label class="f" for="gdob" data-t="Date of birth"></label>
+      <input type="date" id="gdob">
+      <div class="err" id="gerr" role="alert"></div>
+      <button class="btn pri big" type="submit" id="ggo" data-t="View participants"></button>
+    </form>
+  </div>
+  <div id="meBar" class="toolbar" hidden></div>
+  <div id="view"></div>
+</main>
+<script src="config.js"></script>
+<script src="ot.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s), t = OT.t, esc = OT.esc;
+  document.documentElement.lang = OT.lang === 'zh' ? 'zh-Hant' : OT.lang;
+  OT.header('Participants'); OT.applyI18n();
+  $('#demoBanner').hidden = !OT.demo;
+  let S = null, cred = null;
+  try { cred = JSON.parse(sessionStorage.getItem('ot.me') || 'null'); } catch (e) {}
+  const divName = d => t(d === 'junior' ? 'Junior' : 'Senior');
+  function table(d) {
+    const L = S.participants.filter(p => p.division === d).sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    let h = `<div class="plh"><h2>${esc(divName(d))}</h2><span class="count">${L.length}</span></div>`;
+    if (!L.length) return h + `<div class="card muted">${esc(t('No participants yet.'))}</div>`;
+    return h + `<div class="card" style="padding:4px 12px"><table class="pl"><thead><tr><th></th><th>${esc(t('Registration number'))}</th><th>${esc(t('Name'))}</th><th>${esc(t('Nationality'))}</th><th>${esc(t('Status'))}</th></tr></thead><tbody>` +
+      L.map((p, i) => `<tr class="${p.id === S.me.id ? 'me' : ''}"><td class="n">${i + 1}</td><td>${esc(p.id)}</td><td><b>${esc(p.name)}</b></td><td>${OT.flag(p.nationality)} ${esc(OT.countryName(p.nationality) || p.nat_name || p.nationality)}</td>` +
+        `<td><span class="pill ${p.status === 'checked-in' ? 'ok' : ''}">${esc(t(p.status))}</span></td></tr>`).join('') + `</tbody></table></div>`;
+  }
+  function render() {
+    const signed = !!(S && S.me);
+    $('#gate').hidden = signed; $('#meBar').hidden = !signed;
+    if (!signed) { $('#view').innerHTML = ''; $('#upd').textContent = ''; return; }
+    const me = S.me;
+    $('#meBar').innerHTML = `<span>${esc(t('Signed in as'))}: <b>${OT.flag(me.nationality)} ${esc(me.name)}</b> · ${esc(me.id)} · ${esc(divName(me.division))}</span><button class="btn sm" id="out">${esc(t('Sign out'))}</button>`;
+    $('#out').onclick = () => { sessionStorage.removeItem('ot.me'); cred = null; S = null; render(); };
+    const order = me.division === 'senior' ? ['senior', 'junior'] : ['junior', 'senior'];
+    $('#view').innerHTML = `<p class="muted">${esc(t('Your name is highlighted. If anything is wrong, contact the organizer.'))} · ${esc(t('Total'))} ${S.participants.length}</p>` + order.map(table).join('');
+    $('#upd').textContent = `${t('Last update')} ${new Date().toLocaleTimeString()}`;
+  }
+  async function load() {
+    if (!cred) { S = null; render(); return; }
+    try { const r = await OT.api.view(cred.id, cred.dob); if (r && r.ok) S = r; else { sessionStorage.removeItem('ot.me'); cred = null; S = null; } render(); } catch (e) {}
+  }
+  $('#gf').onsubmit = async e => {
+    e.preventDefault();
+    const id = $('#gid').value.trim().toUpperCase(), dob = $('#gdob').value;
+    $('#gerr').textContent = ''; $('#ggo').disabled = true;
+    try {
+      const r = await OT.api.view(id, dob);
+      if (r && r.ok) { cred = { id, dob }; sessionStorage.setItem('ot.me', JSON.stringify(cred)); S = r; render(); }
+      else $('#gerr').textContent = t('No registration matches this number and date of birth.');
+    } catch (x) { $('#gerr').textContent = t('Could not send. Please try again.'); }
+    $('#ggo').disabled = false;
+  };
+  load(); setInterval(() => { if (cred) load(); }, 60000);
+})();
+</script>
+</body>
+</html>

@@ -67,14 +67,15 @@ const settings = () => ({ reg_open: props().getProperty('REG_OPEN') !== '0', bra
 const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
 
 // Public (no login): only settings and the number of registrations.
-// Participants (registration number + date of birth): the bracket, once it is published on the competition day.
+// Participants (registration number + date of birth): the participant list (no dates of birth) at any time,
+//   and the bracket once it is published on the competition day.
 // Admin: everything.
 function state(admin, me) {
   const P = rows(SH.P, PH), st = settings(), active = P.filter(p => p.status !== 'withdrawn');
   const open = admin || (me && st.bracket_public);
   return {
     ok: true, settings: st, count: active.length, me: me || null,
-    participants: admin ? P : open ? active.map(publicP) : [],
+    participants: admin ? P : me ? active.map(publicP) : [],
     draws: open ? rows(SH.D, DH) : [], matches: open ? rows(SH.M, MH) : [], at: new Date().toISOString()
   };
 }
