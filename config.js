@@ -2,7 +2,7 @@
 // API_URL: the Apps Script web app URL (…/exec). Leave empty to run in demo mode
 // (data is kept only in this browser — for trying things out).
 window.OT_CONFIG = {
-  API_URL: '',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyA7O57wM2QB3WwIDa_nYdBVsE0PEpRwHbWPWcderWoCA8IZhlJkzVmvv45eqOHNyUKWQ/exec',
   EVENT: 'RoboRAVE Taiwan Open 2026',
   TITLE: 'Robot Battle Othello',
   DATE: '2026-12-13',
