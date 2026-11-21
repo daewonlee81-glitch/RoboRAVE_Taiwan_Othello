@@ -32,6 +32,7 @@ function setup() {
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('ADMIN_KEY')) props.setProperty('ADMIN_KEY', Utilities.getUuid().slice(0, 8));
   if (!props.getProperty('REG_OPEN')) props.setProperty('REG_OPEN', '1');
+  if (!props.getProperty('BRACKET_PUBLIC')) props.setProperty('BRACKET_PUBLIC', '0');
   Logger.log('ADMIN_KEY = ' + props.getProperty('ADMIN_KEY'));
 }
 
@@ -62,16 +63,26 @@ function upsert(n, head, list) {
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max || 80);
 const props = () => PropertiesService.getScriptProperties();
 const isAdmin = k => !!k && k === props().getProperty('ADMIN_KEY');
-const settings = () => ({ reg_open: props().getProperty('REG_OPEN') !== '0' });
+const settings = () => ({ reg_open: props().getProperty('REG_OPEN') !== '0', bracket_public: props().getProperty('BRACKET_PUBLIC') === '1' });
 const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
 
-function state(admin) {
-  const P = rows(SH.P, PH);
+// Public (no login): only settings and the number of registrations.
+// Participants (registration number + date of birth): the bracket, once it is published on the competition day.
+// Admin: everything.
+function state(admin, me) {
+  const P = rows(SH.P, PH), st = settings(), active = P.filter(p => p.status !== 'withdrawn');
+  const open = admin || (me && st.bracket_public);
   return {
-    ok: true, settings: settings(),
-    participants: admin ? P : P.filter(p => p.status !== 'withdrawn').map(publicP),
-    draws: rows(SH.D, DH), matches: rows(SH.M, MH), at: new Date().toISOString()
+    ok: true, settings: st, count: active.length, me: me || null,
+    participants: admin ? P : open ? active.map(publicP) : [],
+    draws: open ? rows(SH.D, DH) : [], matches: open ? rows(SH.M, MH) : [], at: new Date().toISOString()
   };
+}
+function view(b) {
+  const id = clean(b.id, 10).toUpperCase(), dob = clean(b.dob, 10);
+  const p = rows(SH.P, PH).find(x => x.id.toUpperCase() === id && x.dob === dob && x.status !== 'withdrawn');
+  if (!p) return { ok: false, error: 'not_found' };
+  return state(false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality });
 }
 
 /* ---------- web app ---------- */
@@ -88,6 +99,7 @@ function doPost(e) {
   if (!lock.tryLock(20000)) return out({ ok: false, error: 'busy' });
   try {
     if (b.action === 'register') return out(register(b));
+    if (b.action === 'view') return out(view(b));
     if (b.action === 'admin') {
       if (!isAdmin(b.key)) return out({ ok: false, error: 'bad_key' });
       return out(admin(b));
@@ -149,6 +161,7 @@ function admin(b) {
     }
     case 'settings': {
       if (b.reg_open != null) props().setProperty('REG_OPEN', b.reg_open ? '1' : '0');
+      if (b.bracket_public != null) props().setProperty('BRACKET_PUBLIC', b.bracket_public ? '1' : '0');
       return state(true);
     }
   }

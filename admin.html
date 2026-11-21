@@ -93,6 +93,7 @@ tr.wd td{opacity:.45}
         <div class="kpi" id="drawKpi"></div>
         <div class="toolbar">
           <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="onlyChecked"> <span data-t="Checked-in players only"></span></label>
+          <label style="display:flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="pubBracket"> <b data-t="Publish bracket"></b></label>
         </div>
         <div class="grid2">
           <div><label class="f" data-t="Format"></label>
@@ -176,6 +177,7 @@ tr.wd td{opacity:.45}
     'Total = blocks in your colour + 1 point for each opponent warning after the first − repair penalties. Scores are equal → choose golden point or decision and the winner.':
       ['總分＝己方顏色方塊＋對手第二次起每次警告 1 分－維修扣分。同分時請選黃金得分或判定並選擇勝方。', '합계 = 우리 색 블록 + 상대 경고(첫 경고 제외) 1개당 1점 − 수리 감점. 동점이면 골든포인트나 판정을 고르고 승자를 지정하세요.'],
     'active': ['參賽', '참가'], 'Draw made': ['賽程已產生', '대진 완료'],
+    'Publish bracket': ['公開賽程表', '대진표 공개'], 'Publish the bracket on the public page now?': ['現在要在公開頁面公布賽程表嗎？', '공개 대진표 페이지에 지금 대진표를 공개할까요?'],
   };
   const T0 = OT.t; const T = (s, ...a) => { const r = OT.lang === 'en' ? s : ((A[s] || [])[OT.lang === 'zh' ? 0 : 1]); return r ? (a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r) : T0(s, ...a); };
   const tt = el => (el || document).querySelectorAll('[data-t]').forEach(e => { e.textContent = T(e.dataset.t); });
@@ -225,6 +227,7 @@ tr.wd td{opacity:.45}
     document.querySelectorAll('#sub [data-s]').forEach(b => b.classList.toggle('pri', b.dataset.s === tab));
     SUBS.forEach(([k]) => $('#sec-' + k).hidden = k !== tab);
     $('#regOpen').checked = !!(S.settings && S.settings.reg_open);
+    $('#pubBracket').checked = !!(S.settings && S.settings.bracket_public);
     if (tab === 'participants') renderParticipants();
     if (tab === 'draw') renderDraw();
     if (tab === 'matches') renderMatches();
@@ -252,6 +255,7 @@ tr.wd td{opacity:.45}
   });
   $('#plBody').addEventListener('click', e => { const id = e.target.dataset.del; if (id && confirm(T('Delete this participant?'))) api('delete', { id }); });
   $('#regOpen').onchange = e => api('settings', { reg_open: e.target.checked });
+  $('#pubBracket').onchange = e => { if (e.target.checked && !confirm(T('Publish the bracket on the public page now?'))) { e.target.checked = false; return; } api('settings', { bracket_public: e.target.checked }); };
   $('#aAdd').onclick = () => {
     const name = $('#aName').value.replace(/\s+/g, ' ').trim().toUpperCase(), nat = $('#aNat').value;
     if (!name) return;

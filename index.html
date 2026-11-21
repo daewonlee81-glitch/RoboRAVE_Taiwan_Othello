@@ -77,7 +77,7 @@
   OT.api.state().then(s => {
     if (!s || !s.ok) return;
     if (s.settings && s.settings.reg_open === false) { $('#err').textContent = t('Registration is closed.'); $('#go').disabled = true; }
-    const n = s.participants.length;
+    const n = s.count != null ? s.count : s.participants.length;
     if (n) $('#count').textContent = `${t('Registered')}: ${n}`;
   }).catch(() => {});
 

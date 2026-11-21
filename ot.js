@@ -86,6 +86,14 @@
     'Decision': ['判定', '판정'],
     'Disqualification': ['失格', '실격'],
     'Forfeit': ['棄權', '기권'],
+    'The bracket will be published on the competition day.': ['賽程表將於比賽當天公布。', '대진표는 경기 당일 공개됩니다.'],
+    'Competition day': ['比賽日', '경기일'],
+    'Only registered participants can view the bracket. Enter your registration number and date of birth.': ['只有已報名的參賽者可以查看賽程表。請輸入報名編號與出生日期。', '대진표는 참가자만 볼 수 있습니다. 신청 번호와 생년월일을 입력하세요.'],
+    'Registration number': ['報名編號', '신청 번호'],
+    'View bracket': ['查看賽程表', '대진표 보기'],
+    'No registration matches this number and date of birth.': ['找不到符合此編號與出生日期的報名資料。', '신청 번호와 생년월일이 맞는 신청이 없습니다.'],
+    'Signed in as': ['目前登入', '확인된 참가자'],
+    'Sign out': ['登出', '나가기'],
   };
   OT.t = (s, ...a) => { const r = lang === 'en' ? s : ((TR[s] || [])[lang === 'zh' ? 0 : 1] || s); return a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r; };
   OT.applyI18n = root => (root || document).querySelectorAll('[data-t]').forEach(e => { e.textContent = OT.t(e.dataset.t); });
@@ -117,10 +125,10 @@
   const DKEY = 'ot.demo.v1';
   const dget = () => { try { return JSON.parse(localStorage.getItem(DKEY)) || null; } catch (e) { return null; } };
   const dset = d => localStorage.setItem(DKEY, JSON.stringify(d));
-  const demo = () => dget() || { participants: [], draws: [], matches: [], settings: { reg_open: true }, key: 'demo' };
+  const demo = () => dget() || { participants: [], draws: [], matches: [], settings: { reg_open: true, bracket_public: false }, key: 'demo' };
   const nextId = P => 'RT-' + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(4, '0');
   const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
-  const demoState = (d, admin) => ({ ok: true, settings: d.settings, participants: admin ? d.participants : d.participants.filter(p => p.status !== 'withdrawn').map(publicP), draws: d.draws, matches: d.matches, at: new Date().toISOString() });
+  const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, count: act.length, me: me || null, participants: admin ? d.participants : open ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
   async function call(body) {
     if (OT.demo) return demoCall(body);
     const r = await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' });
@@ -135,6 +143,10 @@
       const p = { id: nextId(d.participants), created: now, name: b.name, dob: b.dob, nationality: b.nationality, nat_name: b.nat_name || '', division: b.division, status: 'registered', note: '', lang: b.lang || '' };
       d.participants.push(p); dset(d); return { ok: true, id: p.id, name: p.name, division: p.division };
     }
+    if (b.action === 'view') {
+      const p = d.participants.find(x => x.id.toUpperCase() === String(b.id || '').toUpperCase() && x.dob === b.dob && x.status !== 'withdrawn');
+      return p ? demoState(d, false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality }) : { ok: false, error: 'not_found' };
+    }
     if (b.action !== 'admin') return { ok: false, error: 'unknown_action' };
     if (b.key !== d.key) return { ok: false, error: 'bad_key' };
     if (b.op === 'participant') {
@@ -147,7 +159,7 @@
       d.matches = d.matches.filter(m => m.division !== b.division).concat(b.matches || []);
     } else if (b.op === 'matches') {
       for (const r of b.rows || []) { const i = d.matches.findIndex(m => m.id === r.id); const o = Object.assign({}, r, { updated: now }); if (i >= 0) d.matches[i] = Object.assign(d.matches[i], o); else d.matches.push(o); }
-    } else if (b.op === 'settings') { if (b.reg_open != null) d.settings.reg_open = !!b.reg_open; }
+    } else if (b.op === 'settings') { if (b.reg_open != null) d.settings.reg_open = !!b.reg_open; if (b.bracket_public != null) d.settings.bracket_public = !!b.bracket_public; }
     else if (b.op !== 'state') return { ok: false, error: 'unknown_op' };
     dset(d); return demoState(d, true);
   }
@@ -158,6 +170,7 @@
       return r.json();
     },
     register: data => call(Object.assign({ action: 'register' }, data)),
+    view: (id, dob) => call({ action: 'view', id, dob }),
     admin: (key, op, data) => call(Object.assign({ action: 'admin', key, op }, data || {})),
   };
 
