@@ -95,6 +95,13 @@
     'Signed in as': ['目前登入', '확인된 참가자'],
     'Sign out': ['登出', '나가기'],
     'Participants': ['參賽名單', '참가자 명단'],
+    'Only registered participants can view the participant list.': ['只有已報名的參賽者可以查看參賽名單。', '참가자 명단은 참가자만 볼 수 있습니다.'],
+    'Only registered participants can view the bracket.': ['只有已報名的參賽者可以查看賽程表。', '대진표는 참가자만 볼 수 있습니다.'],
+    'Enter your English name as registered, or your date of birth — either one is enough.': ['請輸入報名時的英文姓名或出生日期，擇一即可。', '신청한 영문 이름 또는 생년월일 중 하나만 입력하면 됩니다.'],
+    'Name (English)': ['英文姓名', '이름 (영문)'],
+    'Enter your name or date of birth.': ['請輸入姓名或出生日期。', '이름 또는 생년월일을 입력하세요.'],
+    'No registration matches this name or date of birth.': ['找不到符合此姓名或出生日期的報名資料。', '이 이름 또는 생년월일로 신청한 참가자가 없습니다.'],
+    'and {0} more': ['等 {0} 人', '외 {0}명'],
     'Schedule': ['賽程時間表', '일정'],
     'Arena': ['場地', '경기장'],
     'Now': ['進行中', '진행 중'],
@@ -112,6 +119,8 @@
   OT.t = (s, ...a) => { const r = lang === 'en' ? s : ((TR[s] || [])[lang === 'zh' ? 0 : 1] || s); return a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r; };
   OT.applyI18n = root => (root || document).querySelectorAll('[data-t]').forEach(e => { e.textContent = OT.t(e.dataset.t); });
   OT.langSwitch = el => { el.innerHTML = LANGS.map(([k, n]) => `<button type="button" class="${k === lang ? 'on' : ''}" data-l="${k}">${n}</button>`).join(''); el.onclick = e => { const b = e.target.closest('[data-l]'); if (b) OT.setLang(b.dataset.l); }; };
+  OT.normName = s => String(s == null ? '' : s).replace(/[^A-Za-z' -]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+  // participant sign-in form: name or date of birth (either one)
   OT.esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 
@@ -158,8 +167,10 @@
       d.participants.push(p); dset(d); return { ok: true, id: p.id, name: p.name, division: p.division };
     }
     if (b.action === 'view') {
-      const p = d.participants.find(x => x.id.toUpperCase() === String(b.id || '').toUpperCase() && x.dob === b.dob && x.status !== 'withdrawn');
-      return p ? demoState(d, false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality }) : { ok: false, error: 'not_found' };
+      const id = String(b.id || '').toUpperCase(), name = OT.normName(b.name), dob = String(b.dob || '');
+      const M = (id || name || dob) ? d.participants.filter(x => x.status !== 'withdrawn' && (!id || x.id.toUpperCase() === id) && (!name || OT.normName(x.name) === name) && (!dob || x.dob === dob)) : [];
+      if (!M.length) return { ok: false, error: 'not_found' };
+      const p = M[0], r = demoState(d, false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality }); r.mine = M.map(x => x.id); return r;
     }
     if (b.action !== 'admin') return { ok: false, error: 'unknown_action' };
     if (b.key !== d.key) return { ok: false, error: 'bad_key' };
@@ -185,7 +196,7 @@
       return r.json();
     },
     register: data => call(Object.assign({ action: 'register' }, data)),
-    view: (id, dob) => call({ action: 'view', id, dob }),
+    view: c => call({ action: 'view', id: c.id || '', name: c.name || '', dob: c.dob || '' }),
     admin: (key, op, data) => call(Object.assign({ action: 'admin', key, op }, data || {})),
   };
 

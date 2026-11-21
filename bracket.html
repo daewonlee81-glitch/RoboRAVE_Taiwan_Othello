@@ -13,10 +13,10 @@
   <div id="demoBanner" class="banner" hidden data-t="Demo mode — data is saved only in this browser."></div>
   <div class="hero"><h1 data-t="Bracket"></h1><span class="chip" data-t="Robot Battle Othello"></span><span class="count" id="upd"></span></div>
   <div class="card narrow" id="gate" hidden>
-    <p class="muted" data-t="Only registered participants can view the bracket. Enter your registration number and date of birth."></p>
+    <p class="muted"><span data-t="Only registered participants can view the bracket."></span> <span data-t="Enter your English name as registered, or your date of birth — either one is enough."></span></p>
     <form id="gf" novalidate>
-      <label class="f" for="gid" data-t="Registration number"></label>
-      <input type="text" id="gid" placeholder="RT-0001" autocapitalize="characters" spellcheck="false" maxlength="10">
+      <label class="f" for="gname" data-t="Name (English)"></label>
+      <input type="text" id="gname" placeholder="HONG GILDONG" autocapitalize="characters" spellcheck="false" maxlength="60" autocomplete="off">
       <label class="f" for="gdob" data-t="Date of birth"></label>
       <input type="date" id="gdob">
       <div class="err" id="gerr" role="alert"></div>
@@ -51,7 +51,7 @@
     $('#gate').hidden = signed; $('#meBar').hidden = !signed;
     if (!signed) { $('#divtabs').innerHTML = ''; $('#view').innerHTML = ''; return; }
     const me = S.me;
-    $('#meBar').innerHTML = `<span>${OT.esc(t('Signed in as'))}: <b>${OT.flag(me.nationality)} ${OT.esc(me.name)}</b> · ${OT.esc(me.id)} · ${OT.esc(t(me.division === 'junior' ? 'Junior' : 'Senior'))}</span><button class="btn sm" id="out">${OT.esc(t('Sign out'))}</button>`;
+    $('#meBar').innerHTML = `<span>${OT.esc(t('Signed in as'))}: <b>${OT.flag(me.nationality)} ${OT.esc(me.name)}</b> · ${OT.esc(me.id)} · ${OT.esc(t(me.division === 'junior' ? 'Junior' : 'Senior'))}${(S.mine || []).length > 1 ? ' ' + OT.esc(t('and {0} more', S.mine.length - 1)) : ''}</span><button class="btn sm" id="out">${OT.esc(t('Sign out'))}</button>`;
     $('#out').onclick = () => { sessionStorage.removeItem('ot.me'); cred = null; S = null; render(); };
     if (!S.settings || !S.settings.bracket_public) {
       $('#divtabs').innerHTML = '';
@@ -60,21 +60,25 @@
       stamp(); return;
     }
     tabs();
-    $('#view').innerHTML = OT.renderDivision(div, S, {}).replace(new RegExp(`(${OT.esc(me.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'), '<mark>$1</mark>');
+    const P = new Map(S.participants.map(p => [p.id, p])), names = (S.mine || [me.id]).map(id => (P.get(id) || {}).name).filter(Boolean);
+    const rx = names.length ? new RegExp(`(${names.map(n => OT.esc(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g') : null;
+    $('#view').innerHTML = rx ? OT.renderDivision(div, S, {}).replace(rx, '<mark>$1</mark>') : OT.renderDivision(div, S, {});
     stamp();
   }
   async function load() {
     if (!cred) { S = null; render(); return; }
-    try { const r = await OT.api.view(cred.id, cred.dob); if (r && r.ok) { S = r; if (!q.get('div') && r.me) div = r.me.division; } else { sessionStorage.removeItem('ot.me'); cred = null; S = null; } render(); } catch (e) {}
+    try { const r = await OT.api.view(cred); if (r && r.ok) { S = r; if (!q.get('div') && r.me) div = r.me.division; } else { sessionStorage.removeItem('ot.me'); cred = null; S = null; } render(); } catch (e) {}
   }
   $('#gf').onsubmit = async e => {
     e.preventDefault();
-    const id = $('#gid').value.trim().toUpperCase(), dob = $('#gdob').value;
+    const name = OT.normName($('#gname').value), dob = $('#gdob').value;
+    if (!name && $('#gname').value.trim()) { $('#gerr').textContent = t('Please enter the name in English letters.'); return; }
+    if (!name && !dob) { $('#gerr').textContent = t('Enter your name or date of birth.'); return; }
     $('#gerr').textContent = ''; $('#ggo').disabled = true;
     try {
-      const r = await OT.api.view(id, dob);
-      if (r && r.ok) { cred = { id, dob }; sessionStorage.setItem('ot.me', JSON.stringify(cred)); S = r; div = r.me.division; render(); }
-      else $('#gerr').textContent = t('No registration matches this number and date of birth.');
+      const r = await OT.api.view({ name, dob });
+      if (r && r.ok) { cred = { name, dob }; sessionStorage.setItem('ot.me', JSON.stringify(cred)); S = r; div = r.me.division; render(); }
+      else $('#gerr').textContent = t('No registration matches this name or date of birth.');
     } catch (x) { $('#gerr').textContent = t('Could not send. Please try again.'); }
     $('#ggo').disabled = false;
   };

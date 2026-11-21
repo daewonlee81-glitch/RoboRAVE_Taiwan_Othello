@@ -85,11 +85,17 @@ function state(admin, me) {
     draws: open ? rows(SH.D, DH) : [], matches: open ? rows(SH.M, MH) : [], at: new Date().toISOString()
   };
 }
+// Participant sign-in: the registered English name (case and spacing ignored) or the date of birth — either one is enough.
+// If both are given, both must match. Several matches (e.g. the same date of birth) → all of them are "mine".
+const normName = s => String(s == null ? '' : s).replace(/[^A-Za-z' -]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
 function view(b) {
-  const id = clean(b.id, 10).toUpperCase(), dob = clean(b.dob, 10);
-  const p = rows(SH.P, PH).find(x => x.id.toUpperCase() === id && x.dob === dob && x.status !== 'withdrawn');
-  if (!p) return { ok: false, error: 'not_found' };
-  return state(false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality });
+  const id = clean(b.id, 10).toUpperCase(), name = normName(clean(b.name, 60)), dob = clean(b.dob, 10);
+  if (!id && !name && !dob) return { ok: false, error: 'not_found' };
+  const M = rows(SH.P, PH).filter(x => x.status !== 'withdrawn' && (!id || x.id.toUpperCase() === id) && (!name || normName(x.name) === name) && (!dob || x.dob === dob));
+  if (!M.length) return { ok: false, error: 'not_found' };
+  const p = M[0], r = state(false, { id: p.id, name: p.name, division: p.division, nationality: p.nationality });
+  r.mine = M.map(x => x.id);
+  return r;
 }
 
 /* ---------- web app ---------- */
