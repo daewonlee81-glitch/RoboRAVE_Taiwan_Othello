@@ -15,7 +15,7 @@
 const SH = { P: 'Participants', M: 'Matches', D: 'Draws' };
 const PH = ['id', 'created', 'name', 'dob', 'nationality', 'nat_name', 'division', 'status', 'note', 'lang'];
 const MH = ['id', 'division', 'stage', 'grp', 'round', 'slot', 'red', 'blue', 'red_score', 'blue_score',
-            'red_warn', 'blue_warn', 'winner', 'method', 'status', 'arena', 'updated'];
+            'red_warn', 'blue_warn', 'winner', 'method', 'status', 'arena', 'updated', 'time'];
 const DH = ['division', 'format', 'json', 'updated'];
 const DIVS = ['junior', 'senior'];
 
@@ -64,9 +64,15 @@ const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/
 const props = () => PropertiesService.getScriptProperties();
 const isAdmin = k => !!k && k === props().getProperty('ADMIN_KEY');
 const settings = () => ({ reg_open: props().getProperty('REG_OPEN') !== '0', bracket_public: props().getProperty('BRACKET_PUBLIC') === '1' });
+// event timetable + match timetable settings (Script property SCHEDULE, JSON). Public.
+function schedule() { try { return JSON.parse(props().getProperty('SCHEDULE') || 'null'); } catch (e) { return null; } }
+function ensureMatchHeader() { // adds columns added after the first setup (e.g. 'time')
+  const s = sheet(SH.M);
+  if (String(s.getRange(1, MH.length).getValue()) !== MH[MH.length - 1]) s.getRange(1, 1, 1, MH.length).setValues([MH]).setFontWeight('bold');
+}
 const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
 
-// Public (no login): only settings and the number of registrations.
+// Public (no login): settings, the event timetable and the number of registrations.
 // Participants (registration number + date of birth): the participant list (no dates of birth) at any time,
 //   and the bracket once it is published on the competition day.
 // Admin: everything.
@@ -74,7 +80,7 @@ function state(admin, me) {
   const P = rows(SH.P, PH), st = settings(), active = P.filter(p => p.status !== 'withdrawn');
   const open = admin || (me && st.bracket_public);
   return {
-    ok: true, settings: st, count: active.length, me: me || null,
+    ok: true, settings: st, schedule: schedule(), count: active.length, me: me || null,
     participants: admin ? P : me ? active.map(publicP) : [],
     draws: open ? rows(SH.D, DH) : [], matches: open ? rows(SH.M, MH) : [], at: new Date().toISOString()
   };
@@ -130,6 +136,7 @@ function register(b) {
 }
 
 function admin(b) {
+  ensureMatchHeader();
   switch (b.op) {
     case 'state': return state(true);
     case 'participant': { // add or edit
@@ -158,6 +165,14 @@ function admin(b) {
     case 'matches': {
       const now = new Date().toISOString();
       upsert(SH.M, MH, (b.rows || []).map(r => Object.assign({}, r, { updated: now })));
+      return state(true);
+    }
+    case 'schedule': {
+      const hm = v => /^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : '';
+      const items = (b.items || []).slice(0, 40).map(i => ({ start: hm(i.start), end: hm(i.end), ko: clean(i.ko, 80), en: clean(i.en, 80), zh: clean(i.zh, 80) }));
+      const c = b.cfg || {};
+      const cfg = { start: hm(c.start) || '13:00', slot: Math.max(1, Math.min(30, +c.slot || 5)), arenas: Math.max(1, Math.min(8, +c.arenas || 1)), finals: hm(c.finals) || '' };
+      props().setProperty('SCHEDULE', JSON.stringify({ items, cfg, updated: new Date().toISOString() }));
       return state(true);
     }
     case 'settings': {

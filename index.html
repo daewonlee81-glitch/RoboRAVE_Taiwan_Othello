@@ -48,6 +48,12 @@
       <p class="muted" data-t="Keep this number for check-in on the competition day."></p>
       <button class="btn" id="again" data-t="Register another participant"></button>
     </div>
+    <div class="card" id="schedCard" style="margin-top:16px">
+      <h2 style="margin-top:0" data-t="Schedule"></h2>
+      <p class="muted" id="schedDay"></p>
+      <table class="sched"><tbody id="schedBody"></tbody></table>
+      <p class="muted" style="font-size:13px" data-t="Times are Taiwan time (UTC+8). The schedule may change depending on the number of participants."></p>
+    </div>
   </div>
 </main>
 <script src="config.js"></script>
@@ -73,9 +79,17 @@
   if (C.NOTICE_URL) links.push(`<a class="btn sm" href="${OT.esc(C.NOTICE_URL)}" target="_blank" rel="noopener">${OT.esc(t('Rules'))}</a>`);
   if (C.SIM_URL) links.push(`<a class="btn sm" href="${OT.esc(C.SIM_URL)}" target="_blank" rel="noopener">${OT.esc(t('Practice simulator'))}</a>`);
   $('#links').innerHTML = links.join('');
+  // event timetable (default until the organizer saves one)
+  function schedule(st) {
+    const items = OT.sched(st).items, now = OT.nowItem(items);
+    $('#schedDay').textContent = `${C.DATE || ''}${C.VENUE ? ' · ' + C.VENUE : ''}`;
+    $('#schedBody').innerHTML = items.map((it, k) => `<tr class="${k === now ? 'now' : ''}"><td class="tm">${OT.esc(it.start)}${it.end ? '–' + OT.esc(it.end) : '~'}</td><td>${OT.esc(OT.itemText(it))}${k === now ? ` <span class="nowtag">${OT.esc(t('Now'))}</span>` : ''}</td></tr>`).join('');
+  }
+  schedule(null);
   // registered count
   OT.api.state().then(s => {
     if (!s || !s.ok) return;
+    schedule(s);
     if (s.settings && s.settings.reg_open === false) { $('#err').textContent = t('Registration is closed.'); $('#go').disabled = true; }
     const n = s.count != null ? s.count : s.participants.length;
     if (n) $('#count').textContent = `${t('Registered')}: ${n}`;

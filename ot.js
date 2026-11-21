@@ -95,6 +95,10 @@
     'Signed in as': ['目前登入', '확인된 참가자'],
     'Sign out': ['登出', '나가기'],
     'Participants': ['參賽名單', '참가자 명단'],
+    'Schedule': ['賽程時間表', '일정'],
+    'Arena': ['場地', '경기장'],
+    'Now': ['進行中', '진행 중'],
+    'Times are Taiwan time (UTC+8). The schedule may change depending on the number of participants.': ['時間為台灣時間（UTC+8）。賽程可能依參賽人數調整。', '시간은 대만 시간(UTC+8)입니다. 참가자 수에 따라 일정이 바뀔 수 있습니다.'],
     'Only registered participants can view the participant list. Enter your registration number and date of birth.': ['只有已報名的參賽者可以查看參賽名單。請輸入報名編號與出生日期。', '참가자 명단은 참가자만 볼 수 있습니다. 신청 번호와 생년월일을 입력하세요.'],
     'View participants': ['查看參賽名單', '명단 보기'],
     'Name': ['姓名', '이름'],
@@ -138,7 +142,7 @@
   const demo = () => dget() || { participants: [], draws: [], matches: [], settings: { reg_open: true, bracket_public: false }, key: 'demo' };
   const nextId = P => 'RT-' + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(4, '0');
   const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
-  const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, count: act.length, me: me || null, participants: admin ? d.participants : me ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
+  const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, schedule: d.schedule || null, count: act.length, me: me || null, participants: admin ? d.participants : me ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
   async function call(body) {
     if (OT.demo) return demoCall(body);
     const r = await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' });
@@ -169,7 +173,8 @@
       d.matches = d.matches.filter(m => m.division !== b.division).concat(b.matches || []);
     } else if (b.op === 'matches') {
       for (const r of b.rows || []) { const i = d.matches.findIndex(m => m.id === r.id); const o = Object.assign({}, r, { updated: now }); if (i >= 0) d.matches[i] = Object.assign(d.matches[i], o); else d.matches.push(o); }
-    } else if (b.op === 'settings') { if (b.reg_open != null) d.settings.reg_open = !!b.reg_open; if (b.bracket_public != null) d.settings.bracket_public = !!b.bracket_public; }
+    } else if (b.op === 'schedule') d.schedule = { items: b.items || [], cfg: b.cfg || {}, updated: now };
+    else if (b.op === 'settings') { if (b.reg_open != null) d.settings.reg_open = !!b.reg_open; if (b.bracket_public != null) d.settings.bracket_public = !!b.bracket_public; }
     else if (b.op !== 'state') return { ok: false, error: 'unknown_op' };
     dset(d); return demoState(d, true);
   }
@@ -334,6 +339,81 @@
     return { first: fin.winner, second: lost(fin), third: third && third.status === 'done' ? third.winner : '', fourth: third && third.status === 'done' && third.winner ? lost(third) : '' };
   };
 
+  /* ===================== schedule ===================== */
+  OT.DEFAULT_ITEMS = [
+    { start: '9:00', end: '9:30', ko: '등록', en: 'Registration', zh: '報到' },
+    { start: '9:30', end: '10:00', ko: '참가자 미팅', en: 'Participant meeting', zh: '選手說明會' },
+    { start: '10:00', end: '12:00', ko: '자유 연습', en: 'Free practice', zh: '自由練習' },
+    { start: '12:00', end: '13:00', ko: '점심', en: 'Lunch', zh: '午餐' },
+    { start: '13:00', end: '14:00', ko: '조별리그 또는 토너먼트', en: 'Group league or knockout', zh: '分組循環賽或淘汰賽' },
+    { start: '14:00', end: '14:30', ko: '준결승 · 3·4위 결정전 · 결승', en: 'Semifinals · 3rd place · Final', zh: '準決賽・季軍賽・決賽' },
+    { start: '14:30', end: '15:00', ko: '메달 수여', en: 'Medal awards', zh: '頒發獎牌' },
+    { start: '15:30', end: '', ko: '시상식', en: 'Awards ceremony', zh: '頒獎典禮' }];
+  OT.DEFAULT_CFG = { start: '13:00', slot: 5, arenas: 1, finals: '14:00' };
+  OT.sched = st => { const s = (st && st.schedule) || {}; return { items: s.items && s.items.length ? s.items : OT.DEFAULT_ITEMS, cfg: Object.assign({}, OT.DEFAULT_CFG, s.cfg || {}), saved: !!(st && st.schedule) }; };
+  OT.itemText = i => (lang === 'ko' ? i.ko : lang === 'zh' ? i.zh : i.en) || i.en || i.ko || i.zh || '';
+  OT.toMin = v => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '')); return m ? +m[1] * 60 + +m[2] : null; };
+  OT.fromMin = n => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+  // minutes since midnight in Taiwan (UTC+8) and Taiwan date, for "now" markers
+  OT.twNow = () => { const d = new Date(Date.now() + 8 * 3600e3); return { date: d.toISOString().slice(0, 10), min: d.getUTCHours() * 60 + d.getUTCMinutes() }; };
+  OT.nowItem = items => { const n = OT.twNow(); if (n.date !== C.DATE) return -1; return items.findIndex((it, k) => { const a = OT.toMin(it.start), b = OT.toMin(it.end) ?? (items[k + 1] ? OT.toMin(items[k + 1].start) : a + 60); return a != null && n.min >= a && n.min < b; }); };
+  OT.stageLabel = (m, st) => {
+    if (m.stage === 'G') return `${OT.t('Group')} ${m.grp} · ${OT.t('Round')} ${m.round}`;
+    if (m.grp === '3P') return OT.t('3rd place');
+    const d = st.draws.find(x => x.division === m.division), J = d ? (typeof d.json === 'string' ? JSON.parse(d.json || '{}') : d.json) : {};
+    return OT.roundName(+m.round, J.rounds || 1);
+  };
+  // Assign a start time and an arena to every match that is not a bye.
+  // Main block (group rounds, early knockout rounds) from cfg.start; semifinals / 3rd place / final from cfg.finals
+  // (or right after the main block if that is later). A player never plays twice in one time slot and keeps match order;
+  // each knockout phase starts after the previous phase has a slot.
+  OT.autoSchedule = (st, cfg, opts) => {
+    const slot = Math.max(1, +cfg.slot || 5), A = Math.max(1, +cfg.arenas || 1), keepDone = !opts || opts.keepDone !== false;
+    const out = [], rowsUsed = [], lastRow = {};
+    const phaseOf = (m, R) => {
+      if (m.stage === 'G') return { block: 0, key: +m.round, bar: false };
+      if (m.grp === '3P') return { block: 1, key: 2, bar: true };
+      const left = R - +m.round;
+      if (left === 0) return { block: 1, key: 3, bar: true };
+      if (left === 1) return { block: 1, key: 1, bar: true };
+      return { block: 0, key: 100 + +m.round, bar: true };
+    };
+    const list = [];
+    ['junior', 'senior'].forEach((div, di) => {
+      const d = st.draws.find(x => x.division === div); if (!d) return;
+      const J = typeof d.json === 'string' ? JSON.parse(d.json || '{}') : d.json, R = J.rounds || 1;
+      st.matches.filter(m => m.division === div && m.method !== 'bye').forEach(m => {
+        if (keepDone && m.status === 'done') return;
+        const ph = phaseOf(m, R);
+        list.push({ m, ph, di, ord: (m.stage === 'G' ? String(m.grp) : '') + String(m.slot).padStart(3, '0') });
+      });
+    });
+    // order: block, phase, interleave divisions match by match, group/slot
+    const keys = [...new Set(list.map(x => x.ph.block * 1000 + x.ph.key))].sort((a, b) => a - b);
+    const start = OT.toMin(cfg.start) ?? 780;
+    let barrier = 0, mainEnd = 0, finalsRow = null;
+    const place = (x, minRow) => {
+      const ids = [x.m.red, x.m.blue].filter(v => v && !String(v).startsWith('@'));
+      let r = Math.max(minRow, ...ids.map(id => (lastRow[id] ?? -1) + 1));
+      while ((rowsUsed[r] || []).length >= A || (rowsUsed[r] || []).some(y => ids.includes(y.m.red) || ids.includes(y.m.blue))) r++;
+      (rowsUsed[r] = rowsUsed[r] || []).push(x); ids.forEach(id => lastRow[id] = r); return r;
+    };
+    for (const k of keys) {
+      const L = list.filter(x => x.ph.block * 1000 + x.ph.key === k);
+      const per = [0, 1].map(di => L.filter(x => x.di === di).sort((a, b) => a.ord.localeCompare(b.ord)));
+      const seq = []; for (let i = 0; i < Math.max(per[0].length, per[1].length); i++) { if (per[0][i]) seq.push(per[0][i]); if (per[1][i]) seq.push(per[1][i]); }
+      if (Math.floor(k / 1000) === 1 && finalsRow == null) {
+        const fm = OT.toMin(cfg.finals), byTime = fm == null ? 0 : Math.ceil((fm - start) / slot);
+        finalsRow = Math.max(rowsUsed.length, byTime); barrier = finalsRow; mainEnd = rowsUsed.length;
+      } else if (L[0].ph.bar) barrier = rowsUsed.length;
+      let maxR = barrier;
+      seq.forEach(x => { const r = place(x, barrier); maxR = Math.max(maxR, r); });
+    }
+    if (finalsRow == null) mainEnd = rowsUsed.length;
+    rowsUsed.forEach((xs, r) => (xs || []).forEach((x, a) => out.push({ id: x.m.id, time: OT.fromMin(start + r * slot), arena: String(a + 1) })));
+    return { rows: out, mainEnd: OT.fromMin(start + mainEnd * slot), finalsStart: finalsRow != null ? OT.fromMin(start + finalsRow * slot) : '', end: OT.fromMin(start + rowsUsed.length * slot), count: out.length };
+  };
+
   /* ===================== rendering ===================== */
   OT.nameOf = (id, P) => {
     if (!id) return '';
@@ -352,7 +432,9 @@
     const done = m.status === 'done', rs = num(m.red_score), bs = num(m.blue_score);
     const side = (id, sc, col) => `<div class="side ${col}${done && m.winner && m.winner === id ? ' win' : ''}${!id ? ' empty' : ''}"><span class="nm">${id ? OT.nameOf(id, P) : (m.method === 'bye' ? OT.t('bye') : '—')}</span><span class="sc">${done && sc != null ? sc : ''}</span></div>`;
     const tag = m.status === 'live' ? `<span class="live">● ${OT.t('live')}</span>` : (done && m.method && m.method !== 'points') ? `<span class="meth">${OT.esc(methodLabel(m.method))}</span>` : '';
-    return `<div class="match${m.status === 'live' ? ' is-live' : ''}${opts && opts.click ? ' clickable' : ''}" data-id="${OT.esc(m.id)}">${side(m.red, rs, 'red')}${side(m.blue, bs, 'blue')}${tag}</div>`;
+    const when = m.time && m.method !== 'bye' ? `<span class="when">${OT.esc(m.time)}${m.arena ? ' · ' + OT.esc(OT.t('Arena')) + ' ' + OT.esc(m.arena) : ''}</span>` : '';
+    const ft = when || tag ? `<div class="ft">${when}${tag}</div>` : '';
+    return `<div class="match${m.status === 'live' ? ' is-live' : ''}${opts && opts.click ? ' clickable' : ''}" data-id="${OT.esc(m.id)}">${side(m.red, rs, 'red')}${side(m.blue, bs, 'blue')}${ft}</div>`;
   };
   OT.renderDivision = (div, state, opts) => {
     const P = new Map(state.participants.map(p => [p.id, p])), draw = state.draws.find(d => d.division === div);

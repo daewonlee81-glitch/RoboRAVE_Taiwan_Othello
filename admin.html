@@ -119,7 +119,36 @@ tr.wd td{opacity:.45}
     </section>
 
     <!-- bracket -->
-    <section id="sec-bracket" hidden><div id="bracketView"></div></section>
+    <section id="sec-bracket" hidden>
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="margin-top:0" data-t="Swap or replace players"></h3>
+        <p class="muted" data-t="Swaps the places of two players in this division's draw (groups and bracket), or puts a player who is not in the draw into the place of one who is. Only players who have not finished a match can be moved."></p>
+        <div class="toolbar"><select id="swA"></select><span>⇄</span><select id="swB"></select><button class="btn pri sm" id="swGo" data-t="Swap"></button></div>
+      </div>
+      <div id="bracketView"></div>
+    </section>
+
+    <!-- schedule -->
+    <section id="sec-schedule" hidden>
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between"><h3 style="margin:0" data-t="Event timetable"></h3><span class="muted" id="evNow"></span></div>
+        <p class="muted" data-t="Shown on the public registration page. Times are Taiwan time."></p>
+        <table class="pl" id="evTable"><thead><tr><th data-t="Start"></th><th data-t="End"></th><th>한국어</th><th>English</th><th>中文</th><th></th></tr></thead><tbody id="evBody"></tbody></table>
+        <div class="toolbar" style="margin-top:10px"><button class="btn sm" id="evAdd" data-t="Add row"></button><button class="btn sm" id="evReset" data-t="Restore default"></button><button class="btn pri sm" id="evSave" data-t="Save timetable"></button><span class="muted" id="evState"></span></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="toolbar" style="justify-content:space-between"><h3 style="margin:0" data-t="Match timetable"></h3><button class="btn sm" id="mtPrint" data-t="Print"></button></div>
+        <div class="toolbar">
+          <label><span data-t="First match"></span> <input type="time" id="cStart" step="60"></label>
+          <label><span data-t="Minutes per match"></span> <input type="number" id="cSlot" min="1" max="30" style="width:70px"></label>
+          <label><span data-t="Arenas"></span> <input type="number" id="cArenas" min="1" max="8" style="width:60px"></label>
+          <label><span data-t="Semifinals and finals from"></span> <input type="time" id="cFinals" step="60"></label>
+          <button class="btn pri sm" id="mtAuto" data-t="Assign times automatically"></button>
+        </div>
+        <p class="muted" id="mtSum"></p>
+        <table class="pl" id="mtTable"><thead><tr><th data-t="Time"></th><th data-t="Arena"></th><th data-t="Division"></th><th data-t="Stage"></th><th data-t="Red"></th><th data-t="Blue"></th><th data-t="Status"></th></tr></thead><tbody id="mtBody"></tbody></table>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -182,6 +211,23 @@ tr.wd td{opacity:.45}
     'All divisions': ['全部組別', '전체 부문'], 'Search name or ID': ['搜尋姓名或編號', '이름·번호 검색'], 'Print list': ['列印名單', '명단 인쇄'],
     'All participants': ['全部參賽者', '전체 참가자'], 'Showing {0} of {1}': ['顯示 {0} / {1}', '{1}명 중 {0}명 표시'],
     'active': ['參賽', '참가'], 'Draw made': ['賽程已產生', '대진 완료'],
+    'Schedule': ['賽程時間表', '일정'], 'Event timetable': ['大會時間表', '대회 일정표'], 'Match timetable': ['比賽時間表', '경기 시간표'],
+    'Shown on the public registration page. Times are Taiwan time.': ['顯示於公開報名頁。時間為台灣時間。', '공개 신청 페이지에 표시됩니다. 시간은 대만 시간입니다.'],
+    'Start': ['開始', '시작'], 'End': ['結束', '끝'], 'Add row': ['新增一列', '행 추가'], 'Restore default': ['恢復預設', '기본값으로'], 'Save timetable': ['儲存時間表', '일정표 저장'],
+    'Unsaved changes': ['尚未儲存', '저장 안 됨'], 'Default timetable (not saved yet)': ['預設時間表（尚未儲存）', '기본 일정표 (아직 저장 전)'], 'Now': ['進行中', '지금'],
+    'First match': ['第一場', '첫 경기'], 'Minutes per match': ['每場分鐘', '경기당 분'], 'Arenas': ['場地數', '경기장 수'], 'Semifinals and finals from': ['準決賽與決賽開始', '준결승·결승 시작'],
+    'Assign times automatically': ['自動排定時間', '시간 자동 배정'], 'Print': ['列印', '인쇄'], 'Time': ['時間', '시간'], 'Arena': ['場地', '경기장'], 'Stage': ['階段', '단계'], 'Red': ['紅方', '레드'], 'Blue': ['藍方', '블루'],
+    'Assign times to all unfinished matches? Times you typed by hand are replaced.': ['要為所有未完成的比賽排定時間嗎？手動輸入的時間會被取代。', '끝나지 않은 모든 경기에 시간을 배정할까요? 직접 입력한 시간은 바뀝니다.'],
+    '{0} matches · main block ends {1} · semifinals/finals from {2} · last match starts {3}': ['{0} 場・主賽程至 {1}・準決賽／決賽 {2} 起・最後一場 {3} 開始', '{0}경기 · 본경기 {1} 종료 · 준결승/결승 {2}부터 · 마지막 경기 {3} 시작'],
+    '{0} matches · last match starts {1}': ['{0} 場・最後一場 {1} 開始', '{0}경기 · 마지막 경기 {1} 시작'],
+    'The main block runs past the semifinal start time. Add arenas, shorten the match interval or move the finals later.': ['主賽程超過準決賽開始時間。請增加場地、縮短間隔或延後決賽。', '본경기가 준결승 시작 시간을 넘깁니다. 경기장을 늘리거나 간격을 줄이거나 결승 시간을 늦추세요.'],
+    'No matches yet. Make the draw first.': ['尚無比賽，請先抽籤。', '아직 경기가 없습니다. 먼저 대진을 만드세요.'],
+    'Not scheduled': ['未排定', '미배정'], 'pending': ['等待', '대기'], 'live': ['進行中', '진행 중'], 'done': ['結束', '종료'],
+    'Swap or replace players': ['交換或替換選手', '선수 자리 바꾸기 / 교체'], 'Swap': ['交換', '바꾸기'],
+    "Swaps the places of two players in this division's draw (groups and bracket), or puts a player who is not in the draw into the place of one who is. Only players who have not finished a match can be moved.":
+      ['交換本組別賽程中兩位選手的位置（分組與淘汰賽），或以未在賽程中的選手替換。只能移動尚未完成比賽的選手。', '이 부문 대진(조와 토너먼트)에서 두 선수의 자리를 맞바꾸거나, 대진에 없는 선수를 대진에 있는 선수 자리에 넣습니다. 끝난 경기가 없는 선수만 옮길 수 있습니다.'],
+    '(not in draw)': ['（不在賽程中）', '(대진에 없음)'], 'Choose two different players.': ['請選擇兩位不同選手。', '서로 다른 두 선수를 고르세요.'],
+    'has a finished match and cannot be moved.': ['已有完成的比賽，無法移動。', '선수는 끝난 경기가 있어 옮길 수 없습니다.'], 'Swap {0} and {1}?': ['交換 {0} 與 {1}？', '{0} ↔ {1} 자리를 바꿀까요?'],
     'Publish bracket': ['公開賽程表', '대진표 공개'], 'Publish the bracket on the public page now?': ['現在要在公開頁面公布賽程表嗎？', '공개 대진표 페이지에 지금 대진표를 공개할까요?'],
   };
   const T0 = OT.t; const T = (s, ...a) => { const r = OT.lang === 'en' ? s : ((A[s] || [])[OT.lang === 'zh' ? 0 : 1]); return r ? (a.length ? r.replace(/\{(\d)\}/g, (_, i) => a[i]) : r) : T0(s, ...a); };
@@ -197,7 +243,7 @@ tr.wd td{opacity:.45}
   if (OT.demo) { $('#demoBanner').hidden = false; $('#demoBanner').textContent = t('Demo mode — data is saved only in this browser.') + ' Admin key: demo'; }
 
   let KEY = sessionStorage.getItem('ot.key') || '', S = null, tab = 'participants', div = 'junior';
-  const SUBS = [['participants', 'Participants'], ['draw', 'Draw'], ['matches', 'Matches'], ['bracket', 'Bracket']];
+  const SUBS = [['participants', 'Participants'], ['draw', 'Draw'], ['schedule', 'Schedule'], ['matches', 'Matches'], ['bracket', 'Bracket']];
   $('#sub').innerHTML = SUBS.map(([k, n]) => `<button class="btn sm" data-s="${k}">${esc(T(n))}</button>`).join('');
   $('#sub').onclick = e => { const b = e.target.closest('[data-s]'); if (b) { tab = b.dataset.s; render(); } };
   $('#divSel').onchange = e => { div = e.target.value; render(); };
@@ -222,7 +268,7 @@ tr.wd td{opacity:.45}
   $('#key').onkeydown = e => { if (e.key === 'Enter') $('#loginBtn').click(); };
   $('#refresh').onclick = () => api('state');
   if (KEY) login();
-  setInterval(() => { if (S && !$('#runner').classList.contains('on')) OT.api.admin(KEY, 'state').then(r => { if (r.ok) { S = r; render(); } }).catch(() => {}); }, 30000);
+  setInterval(() => { if (S && !$('#runner').classList.contains('on') && !(document.activeElement && document.activeElement.closest('#sec-schedule,#plBody'))) OT.api.admin(KEY, 'state').then(r => { if (r.ok) { S = r; render(); } }).catch(() => {}); }, 30000);
 
   const Pmap = () => new Map(S.participants.map(p => [p.id, p]));
   const active = d => S.participants.filter(p => p.division === d && p.status !== 'withdrawn' && (!$('#onlyChecked').checked || p.status === 'checked-in'));
@@ -232,13 +278,14 @@ tr.wd td{opacity:.45}
     if (!S) return;
     document.querySelectorAll('#sub [data-s]').forEach(b => b.classList.toggle('pri', b.dataset.s === tab));
     SUBS.forEach(([k]) => $('#sec-' + k).hidden = k !== tab);
-    $('#divLbl').hidden = $('#divSel').hidden = tab === 'participants';
+    $('#divLbl').hidden = $('#divSel').hidden = tab === 'participants' || tab === 'schedule';
     $('#regOpen').checked = !!(S.settings && S.settings.reg_open);
     $('#pubBracket').checked = !!(S.settings && S.settings.bracket_public);
     if (tab === 'participants') renderParticipants();
     if (tab === 'draw') renderDraw();
     if (tab === 'matches') renderMatches();
-    if (tab === 'bracket') $('#bracketView').innerHTML = OT.renderDivision(div, S, { click: true });
+    if (tab === 'bracket') { $('#bracketView').innerHTML = OT.renderDivision(div, S, { click: true }); renderSwap(); }
+    if (tab === 'schedule') renderSchedule();
   }
 
   /* ---------- participants ---------- */
@@ -311,15 +358,95 @@ tr.wd td{opacity:.45}
   function renderMatches() {
     const P = Pmap(), M = S.matches.filter(m => m.division === div);
     const order = m => (m.stage === 'G' ? 0 : 100) + (+m.round || 0) * 10 + (m.grp === '3P' ? 5 : 0);
-    const ready = M.filter(m => m.status !== 'done' && real(m.red) && real(m.blue)).sort((a, b) => order(a) - order(b) || String(a.grp).localeCompare(b.grp) || a.slot - b.slot);
+    const tk = m => OT.toMin(m.time) ?? 1e4;
+    const ready = M.filter(m => m.status !== 'done' && real(m.red) && real(m.blue)).sort((a, b) => tk(a) - tk(b) || order(a) - order(b) || String(a.grp).localeCompare(b.grp) || a.slot - b.slot);
     const wait = M.filter(m => m.status !== 'done' && !(real(m.red) && real(m.blue)));
     const done = M.filter(m => m.status === 'done' && m.method !== 'bye').sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
-    const label = m => m.stage === 'G' ? `${t('Group')} ${m.grp} · ${t('Round')} ${m.round}` : m.grp === '3P' ? t('3rd place') : OT.roundName(+m.round, (JSON.parse(drawOf(div).json || '{}').rounds) || 1);
+    const label = m => OT.stageLabel(m, S);
     const block = (title, L) => `<div class="qh">${esc(title)} (${L.length})</div>` + L.map(m => `<div class="muted" style="font-size:12px">${esc(label(m))}</div>${OT.matchLine(m, P, { click: true })}`).join('');
     $('#queue').innerHTML = drawOf(div) ? block(T('Ready to play'), ready) + block(T('Waiting'), wait) + block(T('Finished'), done) : `<p class="muted">${esc(t('Not drawn yet'))}</p>`;
     $('#miniBracket').innerHTML = OT.renderDivision(div, S, { click: true });
   }
   document.addEventListener('click', e => { const m = e.target.closest('.match.clickable'); if (m) openRunner(m.dataset.id); });
+
+  /* ---------- schedule ---------- */
+  let EV = null, evDirty = false;
+  const evRow = (it, k) => `<tr data-k="${k}"><td><input type="text" data-f="start" value="${esc(it.start)}" placeholder="13:00" style="width:64px"></td><td><input type="text" data-f="end" value="${esc(it.end)}" placeholder="—" style="width:64px"></td>` +
+    ['ko', 'en', 'zh'].map(f => `<td><input type="text" data-f="${f}" value="${esc(it[f] || '')}"></td>`).join('') + `<td><button class="btn sm" data-evdel="${k}">✕</button></td></tr>`;
+  function renderSchedule() {
+    const sc = OT.sched(S);
+    if (!evDirty) EV = sc.items.map(i => Object.assign({}, i));
+    const now = OT.nowItem(EV);
+    $('#evBody').innerHTML = EV.map(evRow).join('');
+    if (now >= 0) $('#evBody').children[now].style.background = '#eefaf3';
+    $('#evNow').textContent = now >= 0 ? `${T('Now')}: ${OT.itemText(EV[now])}` : '';
+    $('#evState').textContent = evDirty ? T('Unsaved changes') : sc.saved ? '' : T('Default timetable (not saved yet)');
+    const c = sc.cfg, pad = v => { const m = OT.toMin(v); return m == null ? '' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+    if (document.activeElement.closest('#sec-schedule .toolbar') == null) { $('#cStart').value = pad(c.start); $('#cSlot').value = c.slot; $('#cArenas').value = c.arenas; $('#cFinals').value = pad(c.finals); }
+    const P = Pmap(), nm = id => !id ? '—' : String(id).startsWith('@') ? `${t('Group')} ${id.slice(1, 2)} #${id.slice(2)}` : (P.get(id) ? P.get(id).name : id);
+    const M = S.matches.filter(m => m.method !== 'bye').slice().sort((a, b) => (OT.toMin(a.time) ?? 1e4) - (OT.toMin(b.time) ?? 1e4) || (+a.arena || 0) - (+b.arena || 0) || String(a.id).localeCompare(String(b.id)));
+    $('#mtBody').innerHTML = M.length ? M.map(m => `<tr data-id="${esc(m.id)}"${m.status === 'done' ? ' class="wd"' : ''}><td><input type="text" data-f="time" value="${esc(m.time || '')}" placeholder="${esc(T('Not scheduled'))}" style="width:80px"></td><td><input type="number" data-f="arena" min="1" max="8" value="${esc(m.arena || '')}" style="width:56px"></td>` +
+      `<td>${esc(divName(m.division))}</td><td>${esc(OT.stageLabel(m, S))}</td><td>${esc(nm(m.red))}</td><td>${esc(nm(m.blue))}</td><td>${esc(T(m.status || 'pending'))}${m.status === 'done' && m.winner ? ' · ' + esc(nm(m.winner)) : ''}</td></tr>`).join('')
+      : `<tr><td colspan="7" class="muted">${esc(T('No matches yet. Make the draw first.'))}</td></tr>`;
+    const timed = M.filter(m => m.time);
+    if (timed.length) {
+      const last = timed.reduce((a, m) => Math.max(a, OT.toMin(m.time)), 0);
+      $('#mtSum').textContent = T('{0} matches · last match starts {1}', timed.length, OT.fromMin(last));
+    } else $('#mtSum').textContent = '';
+  }
+  const readEV = () => { $('#evBody').querySelectorAll('tr').forEach(tr => { const it = EV[+tr.dataset.k]; tr.querySelectorAll('input').forEach(i => it[i.dataset.f] = i.value.trim()); }); };
+  $('#evBody').addEventListener('input', () => { readEV(); evDirty = true; $('#evState').textContent = T('Unsaved changes'); });
+  $('#evBody').addEventListener('click', e => { const k = e.target.dataset.evdel; if (k == null) return; readEV(); EV.splice(+k, 1); evDirty = true; renderSchedule(); });
+  $('#evAdd').onclick = () => { readEV(); const l = EV[EV.length - 1]; EV.push({ start: l ? (l.end || l.start) : '', end: '', ko: '', en: '', zh: '' }); evDirty = true; renderSchedule(); };
+  $('#evReset').onclick = () => { EV = OT.DEFAULT_ITEMS.map(i => Object.assign({}, i)); evDirty = true; renderSchedule(); };
+  const cfgNow = () => ({ start: $('#cStart').value, slot: +$('#cSlot').value || 5, arenas: +$('#cArenas').value || 1, finals: $('#cFinals').value });
+  const hm = v => { const m = OT.toMin(v); return m == null ? '' : OT.fromMin(m); };
+  $('#evSave').onclick = async () => {
+    readEV(); const items = EV.filter(i => i.start || i.ko || i.en || i.zh).map(i => Object.assign({}, i, { start: hm(i.start), end: hm(i.end) }));
+    const c = cfgNow(); await api('schedule', { items, cfg: Object.assign(c, { start: hm(c.start), finals: hm(c.finals) }) }); evDirty = false; renderSchedule();
+  };
+  $('#mtAuto').onclick = async () => {
+    if (!S.matches.length) return alert(T('No matches yet. Make the draw first.'));
+    if (S.matches.some(m => m.time) && !confirm(T('Assign times to all unfinished matches? Times you typed by hand are replaced.'))) return;
+    const c = cfgNow(); c.start = hm(c.start) || '13:00'; c.finals = hm(c.finals);
+    const r = OT.autoSchedule(S, c);
+    readEV(); const sc = OT.sched(S);
+    await api('schedule', { items: evDirty ? sc.items : EV, cfg: c });
+    await api('matches', { rows: r.rows });
+    $('#mtSum').textContent = r.finalsStart ? T('{0} matches · main block ends {1} · semifinals/finals from {2} · last match starts {3}', r.count, r.mainEnd, r.finalsStart, OT.fromMin(OT.toMin(r.end) - c.slot))
+      : T('{0} matches · last match starts {1}', r.count, OT.fromMin(OT.toMin(r.end) - c.slot));
+    if (c.finals && OT.toMin(r.mainEnd) > OT.toMin(c.finals)) $('#mtSum').textContent += ' — ' + T('The main block runs past the semifinal start time. Add arenas, shorten the match interval or move the finals later.');
+  };
+  $('#mtBody').addEventListener('change', e => {
+    const tr = e.target.closest('tr'), f = e.target.dataset.f; if (!tr || !f) return;
+    let v = e.target.value.trim(); if (f === 'time') { v = hm(v); e.target.value = v; }
+    api('matches', { rows: [{ id: tr.dataset.id, [f]: v }] });
+  });
+  $('#mtPrint').onclick = () => { document.body.classList.add('print-mt'); window.print(); setTimeout(() => document.body.classList.remove('print-mt'), 500); };
+
+  /* ---------- swap / replace players ---------- */
+  const drawIds = d => { const dr = drawOf(d); if (!dr) return []; const J = JSON.parse(dr.json || '{}'); return [...new Set([].concat(...(J.groups || []), ...(J.first || [])).filter(v => v && !String(v).startsWith('@')))]; };
+  const playedDone = id => S.matches.some(m => m.status === 'done' && m.method !== 'bye' && (m.red === id || m.blue === id));
+  function renderSwap() {
+    const P = Pmap(), inD = drawIds(div), opt = id => `<option value="${esc(id)}">${esc(id)} · ${esc(P.get(id) ? P.get(id).name : id)}${playedDone(id) ? ' ✓' : ''}</option>`;
+    const others = S.participants.filter(p => p.division === div && p.status !== 'withdrawn' && !inD.includes(p.id)).map(p => p.id);
+    $('#swA').innerHTML = inD.map(opt).join('');
+    $('#swB').innerHTML = inD.map(opt).join('') + (others.length ? `<optgroup label="${esc(T('(not in draw)'))}">${others.map(opt).join('')}</optgroup>` : '');
+    if (inD.length > 1) $('#swB').selectedIndex = 1;
+    $('#swGo').disabled = !inD.length;
+  }
+  $('#swGo').onclick = async () => {
+    const a = $('#swA').value, b = $('#swB').value, P = Pmap(), n = id => (P.get(id) || {}).name || id;
+    if (!a || !b || a === b) return alert(T('Choose two different players.'));
+    for (const x of [a, b]) if (playedDone(x)) return alert(`${n(x)} ${T('has a finished match and cannot be moved.')}`);
+    if (!confirm(T('Swap {0} and {1}?', n(a), n(b)))) return;
+    const dr = drawOf(div), J = JSON.parse(dr.json || '{}'), f = x => x === a ? b : x === b ? a : x;
+    if (J.groups) J.groups = J.groups.map(g => g.map(f));
+    if (J.first) J.first = J.first.map(pr => pr.map(f));
+    const M = S.matches.filter(m => m.division === div).map(m => Object.assign({}, m, { red: f(m.red), blue: f(m.blue), winner: f(m.winner) }));
+    OT.propagate(div, { format: dr.format, json: J }, M);
+    await api('draw', { division: div, format: dr.format, json: J, matches: M });
+  };
 
   /* ---------- match runner ---------- */
   let R = null, tm = { left: C.MATCH_SEC || 120, run: false, last: 0, gold: false };

@@ -73,7 +73,9 @@ table.st tr.adv td{background:#eefaf3}
 .match .side.win{font-weight:700;background:#f3f8ff}
 .match .side.empty .nm{color:#a3aab5}
 .match .sc{font-variant-numeric:tabular-nums;font-weight:700;min-width:1.5em;text-align:right}
-.match .live,.match .meth{display:block;text-align:right;padding:1px 8px 3px;font-size:11px;color:var(--mute);border-top:1px solid var(--line);background:#fafbfc}
+.match .ft{display:flex;justify-content:space-between;gap:6px;padding:1px 8px 3px;font-size:11px;color:var(--mute);border-top:1px solid var(--line);background:#fafbfc}
+.match .ft .live,.match .ft .meth{margin-left:auto}
+.match .when{font-variant-numeric:tabular-nums;font-weight:600;color:#475467}
 .match .live{color:var(--red);font-weight:700}
 .ph{color:#8a94a3;font-style:italic}
 .third{margin-top:16px;max-width:260px}
@@ -90,3 +92,12 @@ mark{background:#fff1a8;color:inherit;padding:0 2px;border-radius:3px}
   #plTable input,#plTable select{border:0;background:none;appearance:none;-webkit-appearance:none;font:inherit;padding:0;color:#000}
   body{background:#fff}
 }
+@media print{
+  body.print-mt main>*:not(#app),body.print-mt #app>*:not(#sec-schedule),body.print-mt #sec-schedule>.card:first-child,body.print-mt #sec-schedule .toolbar{display:none!important}
+  body.print-mt #mtTable input{border:0;background:none;font:inherit;padding:0;color:#000;-webkit-appearance:none;appearance:none}
+}
+table.sched{width:100%;border-collapse:collapse;font-size:15px}
+table.sched td{padding:8px 6px;border-bottom:1px solid var(--line)}
+table.sched td.tm{white-space:nowrap;font-variant-numeric:tabular-nums;color:#475467;width:1%;padding-right:16px}
+table.sched tr.now td{background:#eefaf3;font-weight:700}
+.nowtag{display:inline-block;font-size:11px;background:#16794a;color:#fff;border-radius:8px;padding:1px 7px;margin-left:6px;vertical-align:middle}
