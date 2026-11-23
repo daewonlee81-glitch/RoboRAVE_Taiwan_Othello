@@ -88,6 +88,9 @@ function state(admin, me) {
 // Participant sign-in: the registered English name (case and spacing ignored) or the date of birth — either one is enough.
 // If both are given, both must match. Several matches (e.g. the same date of birth) → all of them are "mine".
 const normName = s => String(s == null ? '' : s).replace(/[^A-Za-z' -]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+// Registration numbers follow the RoboRAVE Taiwan Open Team IDs for this challenge: RO01, RO02, … (next = highest + 1)
+const ID_PREFIX = 'RO';
+const nextId = P => ID_PREFIX + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(2, '0');
 function view(b) {
   const id = clean(b.id, 10).toUpperCase(), name = normName(clean(b.name, 60)), dob = clean(b.dob, 10);
   if (!id && !name && !dob) return { ok: false, error: 'not_found' };
@@ -133,8 +136,7 @@ function register(b) {
   if (DIVS.indexOf(division) < 0) return { ok: false, error: 'bad_division' };
   const P = rows(SH.P, PH);
   if (P.some(p => p.name.toLowerCase() === name.toLowerCase() && p.dob === dob && p.status !== 'withdrawn')) return { ok: false, error: 'duplicate' };
-  const n = P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1;
-  const id = 'RT-' + ('000' + n).slice(-4);
+  const id = nextId(P);
   const row = { id, created: new Date().toISOString(), name, dob, nationality: nat, nat_name: clean(b.nat_name, 60),
                 division, status: 'registered', note: '', lang: clean(b.lang, 5) };
   sheet(SH.P).appendRow(PH.map(h => row[h]));
@@ -149,8 +151,7 @@ function admin(b) {
       const p = b.p || {};
       if (!p.id) {
         const P = rows(SH.P, PH);
-        const n = P.reduce((m, x) => Math.max(m, parseInt(String(x.id).replace(/\D/g, ''), 10) || 0), 0) + 1;
-        p.id = 'RT-' + ('000' + n).slice(-4); p.created = new Date().toISOString(); p.status = p.status || 'registered';
+        p.id = nextId(P); p.created = new Date().toISOString(); p.status = p.status || 'registered';
       }
       const o = {}; PH.forEach(h => { if (p[h] != null) o[h] = clean(p[h], h === 'note' ? 200 : 80); });
       upsert(SH.P, PH, [o]);

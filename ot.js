@@ -149,7 +149,7 @@
   const dget = () => { try { return JSON.parse(localStorage.getItem(DKEY)) || null; } catch (e) { return null; } };
   const dset = d => localStorage.setItem(DKEY, JSON.stringify(d));
   const demo = () => dget() || { participants: [], draws: [], matches: [], settings: { reg_open: true, bracket_public: false }, key: 'demo' };
-  const nextId = P => 'RT-' + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(4, '0');
+  const nextId = P => 'RO' + String(P.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, ''), 10) || 0), 0) + 1).padStart(2, '0');   // RoboRAVE Taiwan Team ID 형식
   const publicP = p => ({ id: p.id, name: p.name, nationality: p.nationality, nat_name: p.nat_name, division: p.division, status: p.status });
   const demoState = (d, admin, me) => { const act = d.participants.filter(p => p.status !== 'withdrawn'), open = admin || (me && !!d.settings.bracket_public); return { ok: true, settings: d.settings, schedule: d.schedule || null, count: act.length, me: me || null, participants: admin ? d.participants : me ? act.map(publicP) : [], draws: open ? d.draws : [], matches: open ? d.matches : [], at: new Date().toISOString() }; };
   async function call(body) {

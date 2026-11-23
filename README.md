@@ -57,7 +57,7 @@
 
 ## 시트 구조
 
-- `Participants`: id(RT-0001…), created, name, dob, nationality(ISO 2자리 또는 OTHER), nat_name, division(junior/senior), status(registered/checked-in/withdrawn), note, lang
+- `Participants`: id(대만 오픈 Team ID: RO01, RO02 … 새 등록은 가장 큰 번호 + 1), created, name, dob, nationality(ISO 2자리 또는 OTHER), nat_name, division(junior/senior), status(registered/checked-in/withdrawn), note, lang
 - `Matches`: id, division, stage(G=조별 · K=토너먼트), grp, round, slot, red, blue, red_score, blue_score, red_warn, blue_warn, winner, method, status(pending/live/done), arena, updated
 - `Draws`: division, format(groups/knockout), json(조 구성 · 토너먼트 1회전 자리), updated
 
